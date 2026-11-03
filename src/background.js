@@ -297,9 +297,9 @@ async function handle(message,sender) {
     }
     case 'FLUSH_DOWNLOADS': return flushDownloads();
     case 'GET_CHAT': return dbGet('chats',message.id);
-    case 'DELETE_CHAT': await dbDelete('chats',message.id);return {deleted:true};
-    case 'DELETE_CLIP': await dbDelete('clips',message.id);return {deleted:true};
-    case 'DECISION': {
+    case 'DELETE_CHAT': if(!isTrustedDashboardSender(sender,chrome.runtime))throw new Error('Deleting a chat requires the Veyra New Tab dashboard');await dbDelete('chats',message.id);return {deleted:true};
+    case 'DELETE_CLIP': if(!isTrustedDashboardSender(sender,chrome.runtime))throw new Error('Deleting a clip requires the Veyra New Tab dashboard');await dbDelete('clips',message.id);return {deleted:true};
+    case 'DECISION': if(!isTrustedDashboardSender(sender,chrome.runtime))throw new Error('Recording a decision requires the Veyra New Tab dashboard');{
       const settings=await getSettings();
       const dismissed={...(settings.dismissed||{}),[message.id]:Date.now()+7*86400000};
       await patchSettings({dismissed});
@@ -321,7 +321,7 @@ async function handle(message,sender) {
       const settings=await getSettings();
       return {format:'veyra-backup-v1',exportedAt:new Date().toISOString(),chats,clips,settings:{language:settings.language,theme:settings.theme,tabCategories:settings.tabCategories,tabAssignments:settings.tabAssignments,tabSort:settings.tabSort,autoOrganizeTabs:settings.autoOrganizeTabs}};
     }
-    case 'IMPORT': return importBackup(message.data);
+    case 'IMPORT': if(!isTrustedDashboardSender(sender,chrome.runtime))throw new Error('Importing a backup requires the Veyra New Tab dashboard');return importBackup(message.data);
     default: throw new Error('Unsupported message');
   }
 }

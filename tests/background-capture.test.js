@@ -137,3 +137,29 @@ test('partial late window appends to the same persistent chat without losing 650
  assert.equal(repeat.data.reason,'Unchanged');
  assert.equal((await send({type:'GET_CHAT',id})).data.messages.length,651);
 });
+
+test('destructive and bulk data operations require the trusted New Tab dashboard sender',async()=>{
+  const validImport={format:'veyra-backup-v1',chats:[{url:'https://chatgpt.com/c/evil-import',title:'Evil import',messages:[{role:'user',text:'should not land'}]}],clips:[]};
+  const untrusted={id:'veyra-test-extension',url:'https://chatgpt.com/c/x',tab:{id:3,url:'https://chatgpt.com/c/x'}};
+  const spoofed={id:'evil-extension',url:'chrome-extension://veyra-test-extension/src/ui/newtab.html',tab:{id:3,url:'chrome-extension://veyra-test-extension/src/ui/newtab.html'}};
+  for(const sender of [untrusted,spoofed]){
+    assert.equal((await send({type:'DELETE_CHAT',id:'chat:x'},sender)).ok,false);
+    assert.equal((await send({type:'DELETE_CLIP',id:'clip:x'},sender)).ok,false);
+    const imp=await send({type:'IMPORT',data:validImport},sender);
+    assert.equal(imp.ok,false);assert.match(imp.error,/dashboard/);
+    const dec=await send({type:'DECISION',id:'sug-x',answer:'no'},sender);
+    assert.equal(dec.ok,false);assert.match(dec.error,/dashboard/);
+  }
+  // The guard, not the format check, blocked the untrusted import: nothing landed.
+  assert.equal((await send({type:'GET_CHAT',id:'chat:https://chatgpt.com/c/evil-import'})).data,undefined);
+  const dashboard={id:'veyra-test-extension',url:'chrome-extension://veyra-test-extension/src/ui/newtab.html',tab:{id:99,url:'chrome-extension://veyra-test-extension/src/ui/newtab.html'}};
+  if(!stores.has('chats'))stores.set('chats',new Map());
+  stores.get('chats').set('chat:auth-del',{id:'chat:auth-del',url:'https://chatgpt.com/c/auth-del',title:'fixture',messages:[{role:'user',text:'x'}]});
+  const del=await send({type:'DELETE_CHAT',id:'chat:auth-del'},dashboard);
+  assert.equal(del.ok,true,del.error);assert.equal(del.data.deleted,true);
+  assert.equal((await send({type:'GET_CHAT',id:'chat:auth-del'},dashboard)).data,undefined);
+  const goodImport=await send({type:'IMPORT',data:{format:'veyra-backup-v1',chats:[{url:'https://chatgpt.com/c/imported',title:'Imported',messages:[{role:'user',text:'hi'}]}],clips:[]}},dashboard);
+  assert.equal(goodImport.ok,true,goodImport.error);assert.equal(goodImport.data.chatCount,1);
+  const dec=await send({type:'DECISION',id:'suggestion-auth',answer:'no'},dashboard);
+  assert.equal(dec.ok,true,dec.error);
+});
