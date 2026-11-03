@@ -63,3 +63,14 @@ MIT, with retained notices for the adapted components. [LICENSE](LICENSE), [THIR
 **Storage destination:** Settings → Chat storage location provides (1) Browser only (local IndexedDB), (2) automatic Markdown export to a configurable subfolder of Chrome Downloads (optional Downloads permission, while browser is running), or (3) any user-selected folder via the browser's directory picker (mirrors when the Veyra dashboard is open and directory write access is granted; resumes on reopen). Chrome forbids extensions from silently writing to arbitrary absolute filesystem paths. The browser archive is retained regardless of the export setting. See [ADR 0001](docs/decisions/0001-chat-auto-save-and-file-destination.md).
 
 **Limitation:** DOM adapters capture visible, loaded messages rather than requesting private server-side chat history. Very long virtualized conversations may have gaps. The optional file mirrors are plaintext Markdown, so keep destination folders private.
+
+## v0.1.5 — Chrome tab organization (early release)
+
+- **Organize Chrome tabs** is the explicit, confirmed operation that sorts **real open tabs** and creates color-coded **Chrome Tab Groups** by category in each window.
+- **Auto-organize new tabs** is opt-in and is **off by default**. It organizes new eligible tabs after load (Chrome event/alarm-based, not instantaneous).
+- **Dashboard sort** changes only the displayed list, whereas **Organize Chrome tabs** changes the actual browser tab strip.
+- Pinned tabs, existing unrelated groups, and browser-internal pages remain untouched. Already grouped tabs are not forcibly reassigned; category-group reuse is based on matching name and color.
+- The operation verifies the observed order and group membership with fresh Chrome queries. If the Chrome API refuses a change, the UI reports an error instead of a false success.
+- Regression tests use a simulated Chrome tabs/tabGroups contract; **the final behavior in a real user browser has not yet been verified**.
+
+[Download unpacked Chrome ZIP v0.1.5](dist/veyra-v0.1.5-chrome.zip) · [Installation and upgrade instructions](INSTALL.md)
