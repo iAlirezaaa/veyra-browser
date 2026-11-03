@@ -5,6 +5,8 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -22,3 +24,13 @@ jobs:
             dist/veyra-v*-chrome.zip
             dist/SHA256SUMS.txt
           if-no-files-found: error
+      - name: Publish installable ZIP to repository
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -f dist/veyra-v*-chrome.zip dist/SHA256SUMS.txt
+          if ! git diff --cached --quiet; then
+            git commit -m "build: publish installable Chrome ZIP [skip ci]"
+            git push
+          fi

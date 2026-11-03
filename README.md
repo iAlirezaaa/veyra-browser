@@ -23,7 +23,19 @@
 | Laya decision layer | Optional localhost decision suggestions; no external model service included |
 | Privacy | On-device storage, explicit site permissions, no telemetry or account required |
 
-**Version 0.1.1 — Dark mode + install package.** Download the [Chrome extension ZIP](dist/veyra-v0.1.1-chrome.zip), extract it, then use **Load unpacked** in chrome://extensions. See [installation guide](INSTALL.md). Supports Light, Dark and System themes, saved across the dashboard and popup.
+**Version 0.1.2 — More reliable auto-capture and configurable storage.** Download the [Chrome extension ZIP](dist/veyra-v0.1.2-chrome.zip), extract it, then use **Load unpacked** in chrome://extensions. See [installation guide](INSTALL.md). Supports Light, Dark and System themes, saved across the dashboard and popup.
+
+### Automatically save new AI chats
+
+1. In Veyra Settings, select **Enable automatic AI capture** and approve permissions for the supported AI sites.
+2. Start a new conversation. Veyra watches single-page-app route changes and new messages, then attempts to store conversation snapshots in its on-device IndexedDB archive.
+3. Check the latest capture status in the dashboard. Pages with new/virtualized UI may require later adapter updates.
+4. Choose one optional file destination under Settings:
+   - **Browser archive only**: no extra files, always local.
+   - **Downloads subfolder**: saves Markdown copies under a validated path relative to your Downloads directory; requires optional Downloads permission.
+   - **Selected folder**: pick any folder via browser file picker. Its handle and permission remain in the dashboard; sync occurs while Veyra dashboard is open and can resume on reopen, not in a closed-tab background worker.
+
+Exports and user-selected folders are **not uploaded to GitHub or any cloud service**. Automatic capture remains opt-in for privacy; manual permission approval is required. See [design decision](docs/decisions/0001-chat-auto-save-and-file-destination.md).
 
 **Status: early MVP.** The supplied source has automated unit and static tests. It has not yet been tested end-to-end as a Chrome Store build. Chat exporters may be incomplete on virtualized/updated third-party sites. Laya service is optional and not bundled. The periodic MV3 background review is not a continuously running process.
 
@@ -32,7 +44,7 @@
 1. Download the repository or a packaged extension release.
 2. Navigate to `chrome://extensions` and enable **Developer mode**.
 3. Click **Load unpacked** and choose the directory that contains `manifest.json`.
-4. Open a new tab for Veyra. In settings, enable AI-site capture **per provider** only if desired.
+4. Open a new tab for Veyra. In settings, use **Enable automatic AI capture** and approve the requested host permissions.
 
 Chrome does not allow extensions to silently change all browser startup preferences. To use the New Tab dashboard at startup, set Chrome → Settings → On startup → Open the New Tab page.
 
