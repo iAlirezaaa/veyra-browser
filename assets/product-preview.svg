@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="920" viewBox="0 0 1500 920" role="img" aria-label="Veyra browser workspace dashboard preview, English interface with tab review and AI chat library">
+<style>
+text{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;fill:#20283b}.muted{font-size:13px;fill:#8e9aab}.small{font-size:14px;fill:#607088}.medium{font-size:17px;font-weight:620}.big{font-size:34px;font-weight:750}.label{font-size:11px;letter-spacing:2.5px;font-weight:750;fill:#5167f5}
+</style>
+<rect width="1500" height="920" fill="#f6f7fa"/><rect width="250" height="920" fill="white"/>
+<path d="M250 0V920" stroke="#e5e7ef"/>
+<rect x="26" y="34" width="40" height="40" rx="13" fill="#1e293d"/>
+<path d="M39 47l13-8 11 8v16l-11 8-13-8z M46 45v20 M53 42v26" fill="none" stroke="#c9d1ff" stroke-width="1.9"/>
+<text x="80" y="61" style="font-size:29px;font-weight:780;letter-spacing:-1.5px">veyra<tspan fill="#5865f6">.</tspan></text><text x="80" y="81" class="muted" style="font-size:11px">Browser workspace</text>
+<text x="35" y="164" class="label" fill="#8f9baa">WORKSPACE</text>
+<rect x="18" y="186" width="214" height="48" rx="11" fill="#edf0ff"/><text x="40" y="216" style="font-size:15px;font-weight:680;fill:#5268f3">▣   Overview</text>
+<text x="40" y="277" class="small">▤   Open tabs</text><text x="215" y="277" class="small" text-anchor="end">9</text>
+<text x="40" y="338" class="small">◎   AI conversations</text>
+<text x="40" y="399" class="small">◇   Bookmarks</text>
+<text x="40" y="460" class="small">▧   Saved clips</text>
+<path d="M30 808H220" stroke="#e5e7ef"/><text x="40" y="845" class="small">⚙   Settings</text>
+<rect x="23" y="871" width="203" height="32" rx="10" fill="#f5f6fa"/><circle cx="38" cy="887" r="4" fill="#55b99c"/><text x="49" y="892" style="font-size:11px;font-weight:650">Private by design</text>
+<path d="M250 81H1500" stroke="#e5e7ef"/>
+<circle cx="335" cy="41" r="3" fill="#52b99f"/><text x="350" y="45" class="small">Personal space  /  <tspan fill="#263348">Overview</tspan></text><text x="1390" y="45" class="small">EN / فا</text><circle cx="1450" cy="40" r="15" fill="#e9ecff"/><text x="1450" y="45" text-anchor="middle" style="font-size:12px;font-weight:700;fill:#5167f5">V</text>
+<path d="M337 135h18" stroke="#5366f8" stroke-width="2"/><text x="370" y="140" class="label">YOUR SPACE, REIMAGINED</text><text x="332" y="208" style="font-size:45px;font-weight:780;letter-spacing:-1.8px">A clearer way to browse.</text>
+<text x="333" y="241" class="muted" style="font-size:16px">Everything important, beautifully in its place.</text>
+<text x="1419" y="213" text-anchor="end" style="font-size:27px;font-weight:780">Nov 3</text><text x="1420" y="236" text-anchor="end" class="muted">Tuesday, 2026</text>
+<rect x="327" y="274" width="1090" height="64" rx="16" fill="white" stroke="#e5e8f1"/><text x="353" y="312" style="font-size:24px;fill:#5366f8">⌕</text><text x="393" y="312" class="muted">Search tabs, chats and bookmarks...</text>
+<g transform="translate(327,364)"><rect width="259" height="105" rx="15" fill="#ffffff" stroke="#e5e8f1"/><text x="20" y="49" class="big">9</text><text x="20" y="76" class="muted">open tabs</text><rect x="213" y="19" width="27" height="27" rx="8" fill="#eef0ff"/><circle cx="227" cy="32" r="6" fill="none" stroke="#5366f7" stroke-width="1.8"/></g><g transform="translate(600,364)"><rect width="259" height="105" rx="15" fill="#ffffff" stroke="#e5e8f1"/><text x="20" y="49" class="big">6</text><text x="20" y="76" class="muted">active domains</text><rect x="213" y="19" width="27" height="27" rx="8" fill="#eef0ff"/><circle cx="227" cy="32" r="6" fill="none" stroke="#5366f7" stroke-width="1.8"/></g><g transform="translate(873,364)"><rect width="259" height="105" rx="15" fill="#ffffff" stroke="#e5e8f1"/><text x="20" y="49" class="big">3</text><text x="20" y="76" class="muted">saved conversations</text><rect x="213" y="19" width="27" height="27" rx="8" fill="#eef0ff"/><circle cx="227" cy="32" r="6" fill="none" stroke="#5366f7" stroke-width="1.8"/></g><g transform="translate(1146,364)"><rect width="259" height="105" rx="15" fill="#ffffff" stroke="#e5e8f1"/><text x="20" y="49" class="big">12</text><text x="20" y="76" class="muted">bookmarks</text><rect x="213" y="19" width="27" height="27" rx="8" fill="#eef0ff"/><circle cx="227" cy="32" r="6" fill="none" stroke="#5366f7" stroke-width="1.8"/></g>
+<text x="327" y="524" class="label">SMART OVERVIEW</text><text x="327" y="554" style="font-size:22px;font-weight:750">Needs your attention</text><text x="1415" y="553" text-anchor="end" class="small">Refresh ↻</text>
+<rect x="327" y="575" width="1090" height="68" rx="15" fill="white" stroke="#e5e8f1"/>
+<rect x="345" y="591" width="36" height="36" rx="10" fill="#fff4e8"/><text x="363" y="615" text-anchor="middle" style="font-size:18px;fill:#d49a45">◇</text>
+<text x="397" y="602" class="medium" style="font-size:13px">Agent workflow notes — duplicate open tab</text><text x="397" y="621" class="muted" style="font-size:11px">chatgpt.com · Duplicate tab — review before closing</text>
+<rect x="1230" y="590" width="80" height="35" rx="9" fill="#ffffff" stroke="#e6e8f0"/><text x="1270" y="611" text-anchor="middle" style="font-size:12px;fill:#65748d">No, keep</text>
+<rect x="1318" y="590" width="82" height="35" rx="9" fill="#5467f7"/><text x="1359" y="611" text-anchor="middle" style="font-size:12px;fill:white">Yes, archive</text>
+<rect x="327" y="652" width="1090" height="68" rx="15" fill="white" stroke="#e5e8f1"/>
+<rect x="345" y="668" width="36" height="36" rx="10" fill="#fff4e8"/><text x="363" y="692" text-anchor="middle" style="font-size:18px;fill:#d49a45">◇</text>
+<text x="397" y="679" class="medium" style="font-size:13px">Useful reference to review later</text><text x="397" y="698" class="muted" style="font-size:11px">docs.github.com · Not used for over 7 days</text>
+<rect x="1230" y="667" width="80" height="35" rx="9" fill="#ffffff" stroke="#e6e8f0"/><text x="1270" y="688" text-anchor="middle" style="font-size:12px;fill:#65748d">No, keep</text><rect x="1318" y="667" width="82" height="35" rx="9" fill="#5467f7"/><text x="1359" y="688" text-anchor="middle" style="font-size:12px;fill:white">Yes, archive</text>
+<rect x="327" y="746" width="540" height="170" rx="16" fill="white" stroke="#e5e8f1"/>
+<rect x="886" y="746" width="531" height="170" rx="16" fill="white" stroke="#e5e8f1"/>
+<text x="354" y="779" class="label">YOUR FLOW</text><text x="354" y="805" class="medium">Active spaces</text><text x="850" y="805" text-anchor="end" class="small">View all</text>
+<text x="913" y="779" class="label">RECENT CAPTURES</text><text x="913" y="805" class="medium">AI chat library</text><text x="1394" y="805" text-anchor="end" class="small">View all</text>
+<rect x="351" y="831" width="33" height="33" rx="10" fill="#eef0ff"/><text x="367" y="853" text-anchor="middle" style="font-size:15px;fill:#5166f6">G</text><text x="398" y="845" style="font-size:14px;font-weight:660">github.com</text><text x="398" y="861" class="muted" style="font-size:11px">3 open tabs</text>
+<rect x="911" y="831" width="33" height="33" rx="10" fill="#eef0ff"/><text x="928" y="853" text-anchor="middle" style="font-size:15px;fill:#5166f6">◎</text><text x="957" y="845" style="font-size:14px;font-weight:660">AI agent architecture</text><text x="957" y="861" class="muted" style="font-size:11px">ChatGPT · Nov 3</text>
+</svg>
