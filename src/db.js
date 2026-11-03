@@ -9,7 +9,9 @@ function openDb() {
       for (const name of TABLES) if (!db.objectStoreNames.contains(name)) db.createObjectStore(name,{keyPath:'id'});
     };
     request.onsuccess=()=>resolve(request.result);
-    request.onerror=()=>reject(request.error);
+    // A failed open must not poison the cache: clear it so the next call retries
+    // instead of every later read/write rejecting until the extension reloads.
+    request.onerror=()=>{opened=null;reject(request.error);};
   });
   return opened;
 }
