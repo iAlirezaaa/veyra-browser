@@ -74,3 +74,11 @@ MIT, with retained notices for the adapted components. [LICENSE](LICENSE), [THIR
 - Regression tests use a simulated Chrome tabs/tabGroups contract; **the final behavior in a real user browser has not yet been verified**.
 
 [Download unpacked Chrome ZIP v0.1.5](dist/veyra-v0.1.5-chrome.zip) · [Installation and upgrade instructions](INSTALL.md)
+
+## v0.1.6 — Fix: “Tab organization not available” from Veyra New Tab
+
+Version 0.1.5 incorrectly rejected its own dashboard requests because Chrome correctly provides `sender.tab` for extension New Tab pages. The service worker now **validates the extension ID and exact dashboard URL** rather than rejecting every tab-based message. This restores category assignments, real tab organization and the auto-organize toggle while preventing AI-site content scripts from controlling tabs.
+
+**Install:** [Download Chrome ZIP v0.1.6](dist/veyra-v0.1.6-chrome.zip), extract over your **existing** Veyra extension folder, Reload on `chrome://extensions`, then refresh/open a new dashboard tab. When Chrome requires approval for the `tabGroups` permission, accept and re-enable the extension. Try Open tabs → Organize Chrome tabs with two eligible web tabs.
+
+**Validation:** The regression now has an explicit background-message test. Unit/contract tests pass; live interaction in your own browser is not yet confirmed. See [ADR 0003](docs/decisions/0003-dashboard-message-authorization.md) and [installation guide](INSTALL.md).

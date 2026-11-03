@@ -1,6 +1,6 @@
-# Installing Veyra 0.1.5 (Chrome / Edge / Brave)
+# Installing Veyra 0.1.6 (Chrome / Edge / Brave)
 
-**Installer package:** [dist/veyra-v0.1.5-chrome.zip](dist/veyra-v0.1.5-chrome.zip). It is an **unpacked extension archive**, not an executable installer and not a Chrome Web Store release.
+**Installer package:** [dist/veyra-v0.1.6-chrome.zip](dist/veyra-v0.1.6-chrome.zip). It is an **unpacked extension archive**, not an executable installer and not a Chrome Web Store release.
 
 1. Download the ZIP using GitHub's **Download raw file** action.
 2. Extract all files to a permanent folder. Confirm `manifest.json` is directly inside that folder.
@@ -14,11 +14,11 @@
 
 **Persian / فارسی:** فایل ZIP را دانلود و استخراج کنید، سپس به `chrome://extensions` بروید، Developer mode را فعال کنید و با Load unpacked پوشه حاوی `manifest.json` را انتخاب کنید. تغییر حالت روشن/تیره/سیستم از تنظیمات ویرا یا پنجره افزونه ممکن است.
 
-## Update to v0.1.5
+## Update to v0.1.6
 
-Download `dist/veyra-v0.1.5-chrome.zip`, extract over your **existing extension directory**, then Reload in `chrome://extensions`. Keep the original extension path to preserve its identity and locally stored chats. Make a backup before updating. If the dashboard doesn't show conversations, open Settings → Capture settings and explicitly enable the AI providers (or the one-click Enable automatic capture button).
+Download `dist/veyra-v0.1.6-chrome.zip`, extract over your **existing extension directory**, then Reload in `chrome://extensions`. Keep the original extension path to preserve its identity and locally stored chats. Make a backup before updating. If the dashboard doesn't show conversations, open Settings → Capture settings and explicitly enable the AI providers (or the one-click Enable automatic capture button).
 
-## Capture troubleshooting (v0.1.5)
+## Capture troubleshooting (v0.1.6)
 
 1. Open Veyra → Settings → **Enable automatic capture**, grant access to the selected AI website(s). Veyra cannot silently grant browser host permissions.
 2. Start a **new** chat on one of those sites. Open Veyra → AI conversations; initial messages can appear as a draft before the site assigns a permanent URL.
@@ -28,3 +28,9 @@ Download `dist/veyra-v0.1.5-chrome.zip`, extract over your **existing extension 
 
 ## Tab organization
 Open a new tab → **Open tabs** → **Organize Chrome tabs**. Click confirm. If you want new tabs grouped automatically, enable **Auto-organize new tabs**. This is off by default. Pinned tabs and already grouped tabs are preserved. The visible status reports the actual results and errors. **Dashboard sort** only sorts the Veyra list; it does not change your Chrome tab strip.
+
+## When “Organization not available” is shown
+
+Previous versions blocked requests from the Veyra new-tab page because they incorrectly checked `sender.tab`. This has been corrected in v0.1.6. In `chrome://extensions`, check that the extension card shows **0.1.6**. Extract into the existing installation directory and click **Reload**. **Close old Veyra dashboard tabs and open a fresh new tab** so you are not running the old page script. Review any pending Chrome permission prompts, including Tab Groups permission, after the upgrade.
+
+If it still fails, open `chrome://extensions` → Veyra → **Service worker / Inspect views** and record the exact console error (do not share any chat text). Also check whether the operation has web tabs available: pinned tabs, internal Chrome URLs and pre-existing groups are intentionally excluded.
