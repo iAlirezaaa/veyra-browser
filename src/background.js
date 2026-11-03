@@ -4,9 +4,10 @@ import { layaKeepSuggestion } from './laya.js';
 import { updateBadge } from './vendor/tabout-badge.js';
 import { archiveId, isConversationUrl, chatArchiveName, cleanDownloadsFolder, downloadFilename } from './archive.js';
 import { toMarkdown } from './core.js';
-import {sanitizeCategories, DEFAULT_CATEGORIES, TAB_SORTS, assignUrlCategory, orderedTabs, tabCategory} from './tab-workspace.js';
+import {sanitizeCategories, DEFAULT_CATEGORIES, TAB_SORTS, assignUrlCategory, tabCategory} from './tab-workspace.js';
+import {organizeChromeTabs} from './tab-organizer.js';
 
-const DEFAULTS={language:'en',theme:'system',capture:{},layaEnabled:false,autoReview:true,rtlSites:{},dismissed:{},activity:{},exportMode:'local',downloadsFolder:'Veyra/AI-Chats',tabCategories:DEFAULT_CATEGORIES,tabAssignments:{},tabSort:'category'};
+const DEFAULTS={language:'en',theme:'system',capture:{},layaEnabled:false,autoReview:true,rtlSites:{},dismissed:{},activity:{},exportMode:'local',downloadsFolder:'Veyra/AI-Chats',tabCategories:DEFAULT_CATEGORIES,tabAssignments:{},tabSort:'category',autoOrganizeTabs:false};
 const EXPORT_ALARM='veyra-export';
 const HEALTH_STATES=new Set(['waiting-url','no-messages','saved','skipped','error','active']);
 const CAPTURE_SCRIPT_PREFIX='veyra-capture-';
@@ -241,37 +242,23 @@ async function handle(message,sender) {
       if(!TAB_SORTS.includes(message.sort))throw new Error('Invalid tab sorting mode');
       return {settings:await patchSettings({tabSort:message.sort})};
     }
-    case 'TAB_GROUP_CHROME': {
+    case 'TAB_GROUP_CHROME':
+    case 'TAB_REORDER_CHROME':
+    case 'TAB_ORGANIZE_CHROME': {
       if(sender?.tab)throw new Error('This action is only available from the Veyra dashboard');
       const settings=await getSettings();
-      const category=sanitizeCategories(settings.tabCategories).find(x=>x.id===message.categoryId);
-      if(!category)throw new Error('Unknown category');
-      const all=await chrome.tabs.query({});
-      const candidates=all.filter(t=>isWebTab(t) && !t.pinned && (t.groupId===undefined||t.groupId===-1) && tabCategory(t,settings)===category.id);
-      const perWindow=new Map();
-      for(const tab of candidates){if(!perWindow.has(tab.windowId))perWindow.set(tab.windowId,[]);perWindow.get(tab.windowId).push(tab.id);}
-      let grouped=0;
-      for(const [windowId,tabIds] of perWindow){
-        if(!tabIds.length)continue;
-        const groupId=await chrome.tabs.group({tabIds,createProperties:{windowId}});
-        await chrome.tabGroups.update(groupId,{title:category.name,color:category.color});
-        grouped+=tabIds.length;
-      }
-      return {grouped};
+      const mode=message.type==='TAB_GROUP_CHROME'?'group':message.type==='TAB_REORDER_CHROME'?'sort':'both';
+      const result=await organizeChromeTabs(chrome,settings,{mode,categoryId:message.categoryId});
+      await chrome.storage.local.set({tabOrganizationReport:{...result,at:new Date().toISOString(),mode}});
+      return result;
     }
-    case 'TAB_REORDER_CHROME': {
+    case 'TAB_AUTO_ORGANIZE': {
       if(sender?.tab)throw new Error('This action is only available from the Veyra dashboard');
-      const settings=await getSettings();const all=await chrome.tabs.query({});
-      let moved=0;
-      const windows=[...new Set(all.map(x=>x.windowId))];
-      for(const windowId of windows){
-        // Pinned and existing grouped tabs are preserved in place. Sort only
-        // ungrouped normal tabs to prevent implicit ungrouping.
-        const available=all.filter(x=>x.windowId===windowId&&!x.pinned&&(x.groupId===undefined||x.groupId===-1)&&isWebTab(x));
-        const sorted=orderedTabs(available,settings);
-        for(const tab of sorted){await chrome.tabs.move(tab.id,{index:-1});moved++;}
-      }
-      return {moved};
+      const enabled=message.enabled===true;
+      const settings=await patchSettings({autoOrganizeTabs:enabled});
+      const result=enabled?await organizeChromeTabs(chrome,settings,{mode:'both'}):null;
+      if(result)await chrome.storage.local.set({tabOrganizationReport:{...result,at:new Date().toISOString(),mode:'auto'}});
+      return {settings,result};
     }
     case 'SNAPSHOT': return snapshot();
     case 'SAVE_CHAT': return saveChat(message.payload||{},sender);
@@ -317,7 +304,7 @@ async function handle(message,sender) {
     case 'EXPORT': {
       const [chats,clips]=await Promise.all([dbAll('chats'),dbAll('clips')]);
       const settings=await getSettings();
-      return {format:'veyra-backup-v1',exportedAt:new Date().toISOString(),chats,clips,settings:{language:settings.language,theme:settings.theme,tabCategories:settings.tabCategories,tabAssignments:settings.tabAssignments,tabSort:settings.tabSort}};
+      return {format:'veyra-backup-v1',exportedAt:new Date().toISOString(),chats,clips,settings:{language:settings.language,theme:settings.theme,tabCategories:settings.tabCategories,tabAssignments:settings.tabAssignments,tabSort:settings.tabSort,autoOrganizeTabs:settings.autoOrganizeTabs}};
     }
     case 'IMPORT': return importBackup(message.data);
     default: throw new Error('Unsupported message');
@@ -336,7 +323,7 @@ chrome.runtime.onInstalled.addListener(async()=>{
 });
 chrome.runtime.onStartup.addListener(()=>{chrome.alarms.create('veyra-review',{periodInMinutes:10});syncCaptureScripts().catch(error=>console.warn('[Veyra] Capture registration:',error));scheduleExport().catch(()=>{});updateBadge();});
 chrome.permissions.onRemoved.addListener(removed=>{if(removed.origins?.length)syncCaptureScripts().catch(error=>console.warn('[Veyra] Permission changed:',error));});
-chrome.alarms.onAlarm.addListener(a=>{if(a.name==='veyra-review') review().catch(()=>{});if(a.name===EXPORT_ALARM)flushDownloads().catch(error=>chrome.storage.local.set({exportStatus:{error:String(error.message||error),updatedAt:new Date().toISOString()}}));});
+chrome.alarms.onAlarm.addListener(a=>{if(a.name==='veyra-tab-auto')getSettings().then(s=>s.autoOrganizeTabs?organizeChromeTabs(chrome,s,{mode:'both'}):null).then(r=>r&&chrome.storage.local.set({tabOrganizationReport:{...r,at:new Date().toISOString(),mode:'auto'}})).catch(error=>console.warn('[Veyra] Tab organization:',error));if(a.name==='veyra-review') review().catch(()=>{});if(a.name===EXPORT_ALARM)flushDownloads().catch(error=>chrome.storage.local.set({exportStatus:{error:String(error.message||error),updatedAt:new Date().toISOString()}}));});
 chrome.downloads?.onChanged?.addListener(async delta=>{if(!delta.state?.current)return;try {const entries=await dbAll('receipts');for(const entry of entries){if(entry.downloadId!==delta.id || entry.status!=='pending')continue;await dbPut('receipts',{...entry,status:delta.state.current==='complete'?'complete':'interrupted'});}}catch(error){console.warn('[Veyra] Download completion tracking:',error);}});
 chrome.contextMenus.onClicked.addListener(async(info,tab)=>{
   const text=info.menuItemId==='veyra-clip'?info.selectionText:info.linkUrl;
@@ -354,12 +341,14 @@ async function rememberActivity(tabId) {
     await patchSettings({activity:Object.fromEntries(sorted)});
   }catch{}
 }
+async function scheduleTabOrganization(){const settings=await getSettings();if(settings.autoOrganizeTabs)await chrome.alarms.create('veyra-tab-auto',{when:Date.now()+5000});}
 chrome.tabs.onActivated.addListener(({tabId})=>rememberActivity(tabId).catch(()=>{}));
-chrome.tabs.onCreated.addListener(()=>updateBadge());
+chrome.tabs.onCreated.addListener(()=>{updateBadge();scheduleTabOrganization().catch(()=>{});});
 chrome.tabs.onRemoved.addListener(()=>updateBadge());
 chrome.tabs.onUpdated.addListener((id,change,tab)=>{
-  if(change.url){updateBadge();rememberActivity(id).catch(()=>{});}
+  if(change.url){updateBadge();rememberActivity(id).catch(()=>{});scheduleTabOrganization().catch(()=>{});}
   if(change.status==='complete' && isWebTab(tab)) {
+    scheduleTabOrganization().catch(()=>{});
     applyRtl(id,tab.url).catch(()=>{});
     // Recover from a stale dynamic registration without requiring user action.
     getSettings().then(s=>{const site=providerFromUrl(tab.url);if(!site||!s.capture?.[site])return;return chrome.scripting.executeScript({target:{tabId:id},files:['src/content/capture.js']});}).catch(error=>console.warn('[Veyra] Chat injection:',error));
