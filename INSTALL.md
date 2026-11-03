@@ -26,3 +26,14 @@ After reloading the extension, open Veyra Settings and click **Enable automatic 
 - **Selected folder:** click **Choose folder**, pick an OS directory, and approve the browser's read/write permission. Sync happens from the Veyra dashboard when open and resumes at next dashboard visit; background arbitrary-folder writes are not possible while the dashboard is closed.
 
 Do not uninstall your old extension before exporting a backup. The v0.1.2 build is an early developer-mode build, not a Chrome Web Store verified installer.
+
+
+## Chat capture v0.1.3
+
+1. Replace the files **inside the existing extension folder**, then reload the Veyra extension in chrome://extensions. Reload the AI chat tab too.
+2. On an AI conversation tab, open the Veyra toolbar popup and select **Start saving this AI chat**. Approve the requested origin access.
+3. Open Veyra Dashboard → Settings → Capture settings → **Check open AI chats**. Inspect the per-provider status. no-messages means that no known DOM message markers were found; waiting-url means the conversation has not yet received a stable URL; error has a diagnostic reason.
+4. Chat archives stay in the browser by default. To write Markdown to disk, choose **Downloads subfolder** for background export or **Selected folder** for sync while Veyra is open.
+5. Do not delete your old extension before exporting a JSON backup. If the installed extension ID changes, your old archives will remain isolated in the previous profile's extension data.
+
+Download [v0.1.3 Chrome ZIP](dist/veyra-v0.1.3-chrome.zip) after CI publish finishes. The signed-in real-site browser test has not been completed yet.

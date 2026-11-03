@@ -73,3 +73,12 @@ npm run package
 **Clear, user-controlled, reversible, extensible.** No automatic destructive action; explicit consent before browsing chat content; data is exportable; avoid unnecessary extension permissions; preserve bilingual accessibility and readable navigation.
 
 **Credits & licensing:** MIT for this repository, with original third-party license notices for adapted modules inspired by [Tab Out](https://github.com/zarazhangrui/tab-out) and [LocalThink LTF Builder](https://github.com/localthink-org/localthink-builder). See `THIRD_PARTY_NOTICES.md` before redistribution.
+
+
+## 0.1.3 — Chat capture repair & troubleshooting
+
+- Captures the newer ChatGPT/Work conversation layout (data-content-search-unit-key and user bubbles), as well as older role-marked messages. Claude message selector fallbacks are also improved.
+- Open the AI chat, click **Veyra** in the browser toolbar, then **Start saving this AI chat** and approve that site's access. The dashboard's **Settings → Capture settings → Check open AI chats** reports actual results and errors.
+- The browser archive saves to IndexedDB; disk files require **Settings → Chat storage location** and Downloads or a selected folder. The latter syncs while the Veyra dashboard is open.
+- Download the **[Veyra 0.1.3 ZIP](dist/veyra-v0.1.3-chrome.zip)** after the release workflow completes. Keep the same extension folder so local data is not separated by a new extension ID.
+- Unit and browser DOM fixture tests passed; a fully signed-in ChatGPT session has not yet been manually verified. [Technical decision](docs/decisions/0002-capture-compatibility-and-diagnostics.md).
