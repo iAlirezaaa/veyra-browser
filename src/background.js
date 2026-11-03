@@ -2,12 +2,18 @@ import { buildSuggestions, isWebTab, normalizeUrl, hostOf, PROVIDERS, providerFr
 import { dbAll, dbGet, dbPut, dbDelete } from './db.js';
 import { layaKeepSuggestion } from './laya.js';
 import { updateBadge } from './vendor/tabout-badge.js';
+import { archiveId, isConversationUrl, chatArchiveName, cleanDownloadsFolder, downloadFilename } from './archive.js';
+import { toMarkdown } from './core.js';
 
-const DEFAULTS={language:'en',theme:'system',capture:{},layaEnabled:false,autoReview:true,rtlSites:{},dismissed:{},activity:{}};
+const DEFAULTS={language:'en',theme:'system',capture:{},layaEnabled:false,autoReview:true,rtlSites:{},dismissed:{},activity:{},exportMode:'local',downloadsFolder:'Veyra/AI-Chats'};
+const EXPORT_ALARM='veyra-export';
 const CAPTURE_SCRIPT_PREFIX='veyra-capture-';
 const getSettings=async()=>({ ...DEFAULTS,...(await chrome.storage.local.get('settings')).settings });
 async function patchSettings(patch) {
   const old=await getSettings();
+  if(patch.exportMode && !['local','downloads','folder'].includes(patch.exportMode))throw new Error('Invalid export mode');
+  if(patch.downloadsFolder && !cleanDownloadsFolder(patch.downloadsFolder))throw new Error('Invalid Downloads folder');
+  if(patch.exportMode==='downloads' && !await chrome.permissions.contains({permissions:['downloads']}))throw new Error('Downloads permission required');
   const next={...old,...patch};
   await chrome.storage.local.set({settings:next});
   return next;
@@ -41,30 +47,82 @@ async function syncCaptureScripts() {
     if(permitted.length) scripts.push({id:CAPTURE_SCRIPT_PREFIX+key,js:['src/content/capture.js'],matches:permitted,runAt:'document_idle',allFrames:false,persistAcrossSessions:true});
   }
   if(scripts.length) await chrome.scripting.registerContentScripts(scripts);
+  // Dynamic registrations apply to future document loads; already-open AI tabs
+  // must be injected immediately after a user grants permission.
+  const tabs=await chrome.tabs.query({});
+  for(const tab of tabs){
+    if(!tab.id || !tab.url)continue;
+    if(!scripts.some(script=>script.matches.some(pattern=>tab.url.startsWith(pattern.slice(0,-1)))))continue;
+    try { await chrome.scripting.executeScript({target:{tabId:tab.id},files:['src/content/capture.js']}); }
+    catch { /* Protected tabs, discarded tabs, or navigations may reject injection. */ }
+  }
   return scripts.map(s=>s.id);
 }
+async function scheduleExport() {
+  if(!(await chrome.alarms.get(EXPORT_ALARM))) await chrome.alarms.create(EXPORT_ALARM,{when:Date.now()+60000});
+}
 async function saveChat(payload,sender) {
-  const site=providerFromUrl(sender?.tab?.url||'');
-  const config=await getSettings();
-  if(!site || !config.capture[site] || payload.platform!==site) throw new Error('Capture not enabled for this site');
-  if(!payload.url || hostOf(payload.url)!==hostOf(sender.tab.url)) throw new Error('Invalid source URL');
+  const source=sender?.tab?.url||'';
+  const site=providerFromUrl(source),config=await getSettings();
+  if(!site || !config.capture?.[site] || payload.platform!==site) throw new Error('Capture not enabled for this site');
+  if(!payload.url || hostOf(payload.url)!==hostOf(source)) throw new Error('Invalid source URL');
+  const id=archiveId(payload.url);
+  if(!id || !isConversationUrl(payload.url,site)) return {skipped:true,reason:'Conversation URL not assigned yet'};
   const url=normalizeUrl(payload.url);
-  if(!url) throw new Error('Invalid chat URL');
   const raw=Array.isArray(payload.messages)?payload.messages.slice(0,600):[];
-  const messages=raw.filter(m=>['user','assistant'].includes(m.role) && typeof m.text==='string' && m.text.trim())
+  const messages=raw.filter(m=>['user','assistant'].includes(m?.role) && typeof m.text==='string' && m.text.trim())
     .map(m=>({role:m.role,text:m.text.trim().slice(0,16000)}));
-  if(!messages.length) return {skipped:true,reason:'no visible messages'};
-  // Protect local storage from runaway DOM scrapes and partial overwrite.
+  if(!messages.length) return {skipped:true,reason:'No visible messages'};
   let length=0;
   const safe=messages.filter(m=>(length+=m.text.length)<=250000);
-  if(!safe.length) return {skipped:true,reason:'too large'};
-  const id=`chat:${url}`;
+  if(!safe.length) return {skipped:true,reason:'Too large'};
   const previous=await dbGet('chats',id);
-  if(previous && previous.messages.length>safe.length) return {skipped:true,reason:'partial capture'};
+  if(previous && previous.messages.length>safe.length) return {skipped:true,reason:'Partial capture'};
+  if(previous && JSON.stringify(previous.messages)===JSON.stringify(safe)) return {skipped:true,reason:'Unchanged'};
   const updatedAt=new Date().toISOString();
-  await dbPut('chats',{id,url,platform:site,title:String(payload.title||site).slice(0,250),messages:safe,createdAt:previous?.createdAt||updatedAt,updatedAt});
+  const title=String(payload.title||site).slice(0,250);
+  const archiveName=previous?.archiveName || chatArchiveName({url,title});
+  await dbPut('chats',{id,url,platform:site,title,messages:safe,archiveName,createdAt:previous?.createdAt||updatedAt,updatedAt});
+  await chrome.storage.local.set({captureEvent:{id,platform:site,updatedAt,count:safe.length}});
+  if(config.exportMode==='downloads') await scheduleExport();
   return {saved:true,count:safe.length};
 }
+function markdownDataUrl(content){
+  // Chrome's downloads API can write a data URL to a relative Downloads path.
+  return 'data:text/markdown;charset=utf-8;base64,'+btoa(unescape(encodeURIComponent(content)));
+}
+async function flushDownloads() {
+  const settings=await getSettings();
+  if(settings.exportMode!=='downloads' || !await chrome.permissions.contains({permissions:['downloads']}))return {skipped:true};
+  const dir=cleanDownloadsFolder(settings.downloadsFolder);
+  if(!dir)throw new Error('Invalid Downloads subfolder');
+  const [chats,receipts]=await Promise.all([dbAll('chats'),dbAll('receipts')]);
+  const byId=new Map(receipts.map(x=>[x.id,x]));
+  let started=0;
+  for(const chat of chats.sort((a,b)=>a.updatedAt.localeCompare(b.updatedAt))){
+    const key=`download:${chat.id}`,receipt=byId.get(key);
+    const destination=downloadFilename(chat,dir);
+    if(receipt?.updatedAt===chat.updatedAt && receipt.filePath===destination && receipt.status==='complete')continue;
+    if(receipt?.updatedAt===chat.updatedAt && receipt.filePath===destination && receipt.status==='pending') {
+      const matches=await chrome.downloads.search({id:receipt.downloadId});
+      if(matches[0]?.state==='in_progress')continue;
+      if(matches[0]?.state==='complete') {
+        await dbPut('receipts',{...receipt,status:'complete'});continue;
+      }
+    }
+    const text=toMarkdown(chat);
+    if(text.length>300000)continue; // never create huge data URLs
+    const downloadId=await chrome.downloads.download({url:markdownDataUrl(text),filename:destination,saveAs:false,conflictAction:'overwrite'});
+    await dbPut('receipts',{id:key,updatedAt:chat.updatedAt,status:'pending',downloadId,filePath:destination});
+    started++;
+    if(started>=8)break;
+  }
+  // Recheck pending downloads even if a worker was suspended during completion.
+  if(started===8 || byId.size) await scheduleExport();
+  await chrome.storage.local.set({exportStatus:{mode:'downloads',started,updatedAt:new Date().toISOString()}});
+  return {started};
+}
+
 async function review() {
   const settings=await getSettings();
   const activity=settings.activity||{};
@@ -120,6 +178,24 @@ async function handle(message,sender) {
     case 'GET_REVIEW': return review();
     case 'SETTINGS': return patchSettings(message.patch||{});
     case 'SYNC_CAPTURE': return {ids:await syncCaptureScripts()};
+    case 'CAPTURE_OPEN_TABS': {
+      const ids=await syncCaptureScripts();
+      return {ids,requested:true};
+    }
+    case 'GET_EXPORT_QUEUE': {
+      const [chats,receipts]=await Promise.all([dbAll('chats'),dbAll('receipts')]);
+      const map=new Map(receipts.filter(x=>x.id.startsWith('folder:')).map(x=>[x.id,x]));
+      const directoryId=String(message.directoryId||'').slice(0,64);
+      if(!directoryId)throw new Error('Missing destination');
+      return {chats:chats.filter(c=>map.get(`folder:${c.id}`)?.updatedAt!==c.updatedAt || map.get(`folder:${c.id}`)?.directoryId!==directoryId).slice(0,8)};
+    }
+    case 'ACK_FOLDER_EXPORT': {
+      const chat=await dbGet('chats',message.id);
+      if(!chat||chat.updatedAt!==message.updatedAt || !message.directoryId) return {acknowledged:false};
+      await dbPut('receipts',{id:`folder:${chat.id}`,updatedAt:chat.updatedAt,directoryId:String(message.directoryId).slice(0,64),status:'complete'});
+      return {acknowledged:true};
+    }
+    case 'FLUSH_DOWNLOADS': return flushDownloads();
     case 'GET_CHAT': return dbGet('chats',message.id);
     case 'DELETE_CHAT': await dbDelete('chats',message.id);return {deleted:true};
     case 'DELETE_CLIP': await dbDelete('clips',message.id);return {deleted:true};
@@ -158,10 +234,11 @@ chrome.runtime.onInstalled.addListener(async()=>{
   await chrome.contextMenus.removeAll();
   chrome.contextMenus.create({id:'veyra-clip',title:'Save selection to Veyra',contexts:['selection']});
   chrome.contextMenus.create({id:'veyra-link',title:'Save link to Veyra',contexts:['link']});
-  await syncCaptureScripts(); await updateBadge();
+  await syncCaptureScripts(); await scheduleExport(); await updateBadge();
 });
-chrome.runtime.onStartup.addListener(()=>{chrome.alarms.create('veyra-review',{periodInMinutes:10});syncCaptureScripts().catch(()=>{});updateBadge();});
-chrome.alarms.onAlarm.addListener(a=>{if(a.name==='veyra-review') review().catch(()=>{});});
+chrome.runtime.onStartup.addListener(()=>{chrome.alarms.create('veyra-review',{periodInMinutes:10});syncCaptureScripts().catch(()=>{});scheduleExport().catch(()=>{});updateBadge();});
+chrome.alarms.onAlarm.addListener(a=>{if(a.name==='veyra-review') review().catch(()=>{});if(a.name===EXPORT_ALARM)flushDownloads().catch(error=>chrome.storage.local.set({exportStatus:{error:String(error.message||error),updatedAt:new Date().toISOString()}}));});
+chrome.downloads?.onChanged?.addListener(async delta=>{if(!delta.state?.current)return;try {const entries=await dbAll('receipts');for(const entry of entries){if(entry.downloadId!==delta.id || entry.status!=='pending')continue;await dbPut('receipts',{...entry,status:delta.state.current==='complete'?'complete':'interrupted'});}}catch(error){console.warn('[Veyra] Download completion tracking:',error);}});
 chrome.contextMenus.onClicked.addListener(async(info,tab)=>{
   const text=info.menuItemId==='veyra-clip'?info.selectionText:info.linkUrl;
   if(!text) return;

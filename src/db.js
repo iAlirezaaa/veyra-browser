@@ -1,9 +1,9 @@
 const DATABASE='veyra-v1';
-const TABLES=['chats','clips','decisions'];
+const TABLES=['chats','clips','decisions','preferences','receipts'];
 let opened;
 function openDb() {
   if (!opened) opened=new Promise((resolve,reject)=>{
-    const request=indexedDB.open(DATABASE,1);
+    const request=indexedDB.open(DATABASE,2);
     request.onupgradeneeded=()=>{
       const db=request.result;
       for (const name of TABLES) if (!db.objectStoreNames.contains(name)) db.createObjectStore(name,{keyPath:'id'});
