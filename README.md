@@ -23,6 +23,8 @@
 | Laya decision layer | Optional localhost decision suggestions; no external model service included |
 | Privacy | On-device storage, explicit site permissions, no telemetry or account required |
 
+**Version 0.1.1 — Dark mode + install package.** Download the [Chrome extension ZIP](dist/veyra-v0.1.1-chrome.zip), extract it, then use **Load unpacked** in chrome://extensions. See [installation guide](INSTALL.md). Supports Light, Dark and System themes, saved across the dashboard and popup.
+
 **Status: early MVP.** The supplied source has automated unit and static tests. It has not yet been tested end-to-end as a Chrome Store build. Chat exporters may be incomplete on virtualized/updated third-party sites. Laya service is optional and not bundled. The periodic MV3 background review is not a continuously running process.
 
 ## Install in Chrome

@@ -12,3 +12,13 @@ jobs:
           node-version: 22
       - run: npm run check
       - run: python3 -m json.tool manifest.json > /dev/null
+      - run: npm run package
+      - run: cd dist && sha256sum -c SHA256SUMS.txt
+      - name: Upload install package
+        uses: actions/upload-artifact@v4
+        with:
+          name: veyra-chrome-extension
+          path: |
+            dist/veyra-v*-chrome.zip
+            dist/SHA256SUMS.txt
+          if-no-files-found: error

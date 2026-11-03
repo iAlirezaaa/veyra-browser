@@ -1,13 +1,15 @@
 {
   "name": "veyra-browser",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "description": "Local-first bilingual browser workspace",
   "scripts": {
     "test": "node --test tests/*.test.js",
-    "check": "node --check src/background.js && node --check src/content/capture.js && node --check src/ui/app.js && node --check src/ui/popup.js && node --check src/core.js && node --check src/db.js && node --check src/laya.js && npm test",
+    "check": "node --check src/background.js && node --check src/content/capture.js && node --check src/ui/app.js && node --check src/ui/popup.js && node --check src/ui/appearance.js && node --check src/core.js && node --check src/db.js && node --check src/laya.js && npm test",
     "package": "python3 scripts/package.py"
   },
-  "engines": {"node": ">=20"}
+  "engines": {
+    "node": ">=20"
+  }
 }
