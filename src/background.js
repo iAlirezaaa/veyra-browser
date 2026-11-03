@@ -7,6 +7,7 @@ import { toMarkdown } from './core.js';
 
 const DEFAULTS={language:'en',theme:'system',capture:{},layaEnabled:false,autoReview:true,rtlSites:{},dismissed:{},activity:{},exportMode:'local',downloadsFolder:'Veyra/AI-Chats'};
 const EXPORT_ALARM='veyra-export';
+const HEALTH_STATES=new Set(['waiting-url','no-messages','saved','skipped','error']);
 const CAPTURE_SCRIPT_PREFIX='veyra-capture-';
 const getSettings=async()=>({ ...DEFAULTS,...(await chrome.storage.local.get('settings')).settings });
 async function patchSettings(patch) {
@@ -58,6 +59,43 @@ async function syncCaptureScripts() {
   }
   return scripts.map(s=>s.id);
 }
+async function captureHealth(payload,sender){
+  const site=providerFromUrl(sender?.tab?.url||'');
+  const settings=await getSettings();
+  if(!site||!settings.capture?.[site]||site!==payload.platform)throw new Error('Capture status from an unapproved site');
+  const status=String(payload.status||'');
+  if(!HEALTH_STATES.has(status))throw new Error('Unknown capture status');
+  const old=(await chrome.storage.local.get('captureHealth')).captureHealth||{};
+  const record={...old,[site]:{
+    status,detail:String(payload.detail||'').slice(0,140),
+    count:Math.min(Math.max(Number(payload.count)||0,0),600),
+    checkedAt:new Date().toISOString(),tabId:sender.tab.id
+  }};
+  await chrome.storage.local.set({captureHealth:record});
+  return {recorded:true};
+}
+async function captureOpenTabs(){
+  const ids=await syncCaptureScripts();
+  const config=await getSettings();
+  const tabs=(await chrome.tabs.query({})).filter(t=>t.id && providerFromUrl(t.url||'') && config.capture?.[providerFromUrl(t.url||'')]);
+  const results=[];
+  for(const tab of tabs){
+    const platform=providerFromUrl(tab.url);
+    try {
+      // First, a registered script will auto-inject into new pages; this
+      // request triggers a fresh check in already-open conversations.
+      const result=await chrome.tabs.sendMessage(tab.id,{type:'VEYRA_CAPTURE_NOW'});
+      results.push({platform,status:result?.status||'unknown',count:result?.count||0});
+    }catch(error){
+      const detail='Capture script could not be reached; reload the AI tab or check site access';
+      const old=(await chrome.storage.local.get('captureHealth')).captureHealth||{};
+      await chrome.storage.local.set({captureHealth:{...old,[platform]:{status:'error',detail,checkedAt:new Date().toISOString(),tabId:tab.id}}});
+      results.push({platform,status:'error',reason:detail});
+    }
+  }
+  return {ids,tabs:results};
+}
+
 async function scheduleExport() {
   if(!(await chrome.alarms.get(EXPORT_ALARM))) await chrome.alarms.create(EXPORT_ALARM,{when:Date.now()+60000});
 }
@@ -175,13 +213,11 @@ async function handle(message,sender) {
   switch(message?.type) {
     case 'SNAPSHOT': return snapshot();
     case 'SAVE_CHAT': return saveChat(message.payload||{},sender);
+    case 'CAPTURE_HEALTH': return captureHealth(message,sender);
     case 'GET_REVIEW': return review();
     case 'SETTINGS': return patchSettings(message.patch||{});
     case 'SYNC_CAPTURE': return {ids:await syncCaptureScripts()};
-    case 'CAPTURE_OPEN_TABS': {
-      const ids=await syncCaptureScripts();
-      return {ids,requested:true};
-    }
+    case 'CAPTURE_OPEN_TABS': return captureOpenTabs();
     case 'GET_EXPORT_QUEUE': {
       const [chats,receipts]=await Promise.all([dbAll('chats'),dbAll('receipts')]);
       const map=new Map(receipts.filter(x=>x.id.startsWith('folder:')).map(x=>[x.id,x]));
@@ -236,7 +272,8 @@ chrome.runtime.onInstalled.addListener(async()=>{
   chrome.contextMenus.create({id:'veyra-link',title:'Save link to Veyra',contexts:['link']});
   await syncCaptureScripts(); await scheduleExport(); await updateBadge();
 });
-chrome.runtime.onStartup.addListener(()=>{chrome.alarms.create('veyra-review',{periodInMinutes:10});syncCaptureScripts().catch(()=>{});scheduleExport().catch(()=>{});updateBadge();});
+chrome.runtime.onStartup.addListener(()=>{chrome.alarms.create('veyra-review',{periodInMinutes:10});syncCaptureScripts().catch(error=>console.warn('[Veyra] Capture registration:',error));scheduleExport().catch(()=>{});updateBadge();});
+chrome.permissions.onRemoved.addListener(removed=>{if(removed.origins?.length)syncCaptureScripts().catch(error=>console.warn('[Veyra] Permission changed:',error));});
 chrome.alarms.onAlarm.addListener(a=>{if(a.name==='veyra-review') review().catch(()=>{});if(a.name===EXPORT_ALARM)flushDownloads().catch(error=>chrome.storage.local.set({exportStatus:{error:String(error.message||error),updatedAt:new Date().toISOString()}}));});
 chrome.downloads?.onChanged?.addListener(async delta=>{if(!delta.state?.current)return;try {const entries=await dbAll('receipts');for(const entry of entries){if(entry.downloadId!==delta.id || entry.status!=='pending')continue;await dbPut('receipts',{...entry,status:delta.state.current==='complete'?'complete':'interrupted'});}}catch(error){console.warn('[Veyra] Download completion tracking:',error);}});
 chrome.contextMenus.onClicked.addListener(async(info,tab)=>{
