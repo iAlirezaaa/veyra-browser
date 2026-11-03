@@ -35,7 +35,7 @@ let listener;
 const event=()=>({addListener:fn=>{}});
 globalThis.chrome={
   storage:{local:{get:async key=>typeof key==='string'?{[key]:state[key]}:Object.fromEntries(key.map(x=>[x,state[x]])),set:async patch=>Object.assign(state,patch),remove:async key=>delete state[key]}},
-  runtime:{onMessage:{addListener:fn=>listener=fn},onInstalled:event(),onStartup:event()},
+  runtime:{id:'veyra-test-extension',getURL:path=>'chrome-extension://veyra-test-extension/'+path,onMessage:{addListener:fn=>listener=fn},onInstalled:event(),onStartup:event()},
   tabs:{query:async(query={})=>sampleTabs.filter(t=>query.windowId===undefined||query.windowId===t.windowId),get:async(id)=>sampleTabs.find(t=>t.id===id)||{},group:async args=>{grouped.push(args);for(const t of sampleTabs)if(args.tabIds.includes(t.id))t.groupId=args.groupId??77;if(!args.groupId)activeGroups.push({id:77,windowId:1,title:'',color:'grey'});return args.groupId??77},move:async(id,opts)=>{moved.push({id,opts});const ids=Array.isArray(id)?id:[id];for(const t of sampleTabs.filter(t=>ids.includes(t.id)))t.index=ids.indexOf(t.id)},onActivated:event(),onCreated:event(),onRemoved:event(),onUpdated:event()},
   tabGroups:{query:async({windowId})=>activeGroups.filter(x=>x.windowId===windowId),update:async(id,opts)=>{grouped.push({id,opts});Object.assign(activeGroups.find(x=>x.id===id),opts)}},
   action:{setBadgeText:async()=>{},setBadgeBackgroundColor:async()=>{}},
@@ -80,16 +80,37 @@ test('opt-in drafts are persisted before the SPA conversation URL, then migrated
   assert.ok(!result.data.chats.some(x=>x.id==='draft:chatgpt:57'));
 });
 test('tab actions assign, group by category, and exclude existing Chrome groups',async()=>{
- const set=await send({type:'TAB_ASSIGN',tabId:12,categoryId:'work'},{id:'extension'});
+ const dashboard={id:'veyra-test-extension',url:'chrome-extension://veyra-test-extension/src/ui/newtab.html',tab:{id:99,url:'chrome-extension://veyra-test-extension/src/ui/newtab.html'}};
+ const set=await send({type:'TAB_ASSIGN',tabId:12,categoryId:'work'},dashboard);
  assert.equal(set.ok,true);assert.equal(set.data.settings.tabAssignments['https://chatgpt.com/c/group'],'work');
- const sorted=await send({type:'TAB_REORDER_CHROME'},{id:'extension'});
+ const sorted=await send({type:'TAB_REORDER_CHROME'},dashboard);
  assert.equal(sorted.ok,true);assert.ok(moved.length>=1);
- const res=await send({type:'TAB_GROUP_CHROME',categoryId:'work'},{id:'extension'});
+ const res=await send({type:'TAB_GROUP_CHROME',categoryId:'work'},dashboard);
  assert.equal(res.ok,true);assert.equal(res.data.grouped,2);
  assert.deepEqual(grouped[0].tabIds,[11,12]);
  assert.equal(grouped[1].opts.title,'Work');
- const second=await send({type:'TAB_GROUP_CHROME',categoryId:'work'},{id:'extension'});
+ const second=await send({type:'TAB_GROUP_CHROME',categoryId:'work'},dashboard);
  assert.equal(second.ok,true);assert.equal(second.data.grouped,0);
- const denied=await send({type:'TAB_ASSIGN',tabId:12,categoryId:'ai'},{tab:{id:12,url:'https://chatgpt.com/c/group'}});
+ const denied=await send({type:'TAB_ASSIGN',tabId:12,categoryId:'ai'},{id:'veyra-test-extension',url:'https://chatgpt.com/c/group',tab:{id:12,url:'https://chatgpt.com/c/group'}});
  assert.equal(denied.ok,false);
+ assert.match(denied.error,/New Tab dashboard/);
+});
+
+test('legitimate newtab messages with sender.tab are accepted for combined Chrome organization',async()=>{
+ const dashboard={id:'veyra-test-extension',url:'chrome-extension://veyra-test-extension/src/ui/newtab.html',tab:{id:99,url:'chrome-extension://veyra-test-extension/src/ui/newtab.html'}};
+ const reply=await send({type:'TAB_ORGANIZE_CHROME'},dashboard);
+ assert.equal(reply.ok,true,reply.error);
+ assert.equal(reply.data.verified,true);
+ assert.ok(Array.isArray(reply.data.errors));
+ const auto=await send({type:'TAB_AUTO_ORGANIZE',enabled:false},dashboard);
+ assert.equal(auto.ok,true,auto.error);
+});
+test('untrusted content scripts and forged senders cannot manage Chrome tab groups',async()=>{
+ const attempts=[
+  {id:'veyra-test-extension',url:'https://chatgpt.com/c/x',tab:{id:3,url:'https://chatgpt.com/c/x'}},
+  {id:'evil-extension',url:'chrome-extension://veyra-test-extension/src/ui/newtab.html',tab:{id:3,url:'chrome-extension://veyra-test-extension/src/ui/newtab.html'}},
+  {id:'veyra-test-extension',url:'chrome-extension://veyra-test-extension/src/ui/newtab.html.evil'},
+  {id:'veyra-test-extension',url:'chrome-extension://veyra-test-extension/src/ui/popup.html'}
+ ];
+ for(const sender of attempts){const reply=await send({type:'TAB_ORGANIZE_CHROME'},sender);assert.equal(reply.ok,false,JSON.stringify(sender));}
 });

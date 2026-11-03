@@ -6,6 +6,7 @@ import { archiveId, isConversationUrl, chatArchiveName, cleanDownloadsFolder, do
 import { toMarkdown } from './core.js';
 import {sanitizeCategories, DEFAULT_CATEGORIES, TAB_SORTS, assignUrlCategory, tabCategory} from './tab-workspace.js';
 import {organizeChromeTabs} from './tab-organizer.js';
+import {isTrustedDashboardSender} from './message-auth.js';
 
 const DEFAULTS={language:'en',theme:'system',capture:{},layaEnabled:false,autoReview:true,rtlSites:{},dismissed:{},activity:{},exportMode:'local',downloadsFolder:'Veyra/AI-Chats',tabCategories:DEFAULT_CATEGORIES,tabAssignments:{},tabSort:'category',autoOrganizeTabs:false};
 const EXPORT_ALARM='veyra-export';
@@ -224,7 +225,7 @@ async function importBackup(data) {
 async function handle(message,sender) {
   switch(message?.type) {
     case 'TAB_ASSIGN': {
-      if(sender?.tab)throw new Error('This action is only available from the Veyra dashboard');
+      if(!isTrustedDashboardSender(sender,chrome.runtime))throw new Error('Open Veyra in its New Tab dashboard to manage Chrome tabs');
       const tab=await chrome.tabs.get(Number(message.tabId));
       if(!isWebTab(tab))throw new Error('Not a web tab');
       const settings=await getSettings();
@@ -232,20 +233,20 @@ async function handle(message,sender) {
       return {settings:await patchSettings({tabAssignments:assignments})};
     }
     case 'TAB_CATEGORIES': {
-      if(sender?.tab)throw new Error('This action is only available from the Veyra dashboard');
+      if(!isTrustedDashboardSender(sender,chrome.runtime))throw new Error('Open Veyra in its New Tab dashboard to manage Chrome tabs');
       const categories=sanitizeCategories(message.categories);
       if(!categories.length)throw new Error('At least one category is required');
       return {settings:await patchSettings({tabCategories:categories})};
     }
     case 'TAB_SORT': {
-      if(sender?.tab)throw new Error('This action is only available from the Veyra dashboard');
+      if(!isTrustedDashboardSender(sender,chrome.runtime))throw new Error('Open Veyra in its New Tab dashboard to manage Chrome tabs');
       if(!TAB_SORTS.includes(message.sort))throw new Error('Invalid tab sorting mode');
       return {settings:await patchSettings({tabSort:message.sort})};
     }
     case 'TAB_GROUP_CHROME':
     case 'TAB_REORDER_CHROME':
     case 'TAB_ORGANIZE_CHROME': {
-      if(sender?.tab)throw new Error('This action is only available from the Veyra dashboard');
+      if(!isTrustedDashboardSender(sender,chrome.runtime))throw new Error('Open Veyra in its New Tab dashboard to manage Chrome tabs');
       const settings=await getSettings();
       const mode=message.type==='TAB_GROUP_CHROME'?'group':message.type==='TAB_REORDER_CHROME'?'sort':'both';
       const result=await organizeChromeTabs(chrome,settings,{mode,categoryId:message.categoryId});
@@ -253,7 +254,7 @@ async function handle(message,sender) {
       return result;
     }
     case 'TAB_AUTO_ORGANIZE': {
-      if(sender?.tab)throw new Error('This action is only available from the Veyra dashboard');
+      if(!isTrustedDashboardSender(sender,chrome.runtime))throw new Error('Open Veyra in its New Tab dashboard to manage Chrome tabs');
       const enabled=message.enabled===true;
       const settings=await patchSettings({autoOrganizeTabs:enabled});
       const result=enabled?await organizeChromeTabs(chrome,settings,{mode:'both'}):null;
