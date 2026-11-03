@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Veyra — Browser Workspace</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" type="module"></script>
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar" aria-label="Navigation">
+      <div class="brand"><div class="mark" aria-hidden="true"><span></span><span></span><span></span></div><div><strong>veyra<span class="brand-dot">.</span></strong><small data-i18n="brandSubtitle">Browser workspace</small></div></div>
+      <span class="menu-label" data-i18n="workspace">WORKSPACE</span>
+      <nav class="nav" id="nav">
+        <button class="nav-item active" data-view="overview"><span class="nav-icon">◫</span><span data-i18n="overview">Overview</span></button>
+        <button class="nav-item" data-view="tabs"><span class="nav-icon">▤</span><span data-i18n="tabs">Open tabs</span><span class="nav-count" id="navTabCount"></span></button>
+        <button class="nav-item" data-view="chats"><span class="nav-icon">◎</span><span data-i18n="chats">AI conversations</span></button>
+        <button class="nav-item" data-view="bookmarks"><span class="nav-icon">◇</span><span data-i18n="bookmarks">Bookmarks</span></button>
+        <button class="nav-item" data-view="clips"><span class="nav-icon">▧</span><span data-i18n="clips">Saved clips</span></button>
+      </nav>
+      <div class="sidebar-bottom">
+        <div class="sidebar-line"></div>
+        <button class="nav-item" data-view="settings"><span class="nav-icon">⚙</span><span data-i18n="settings">Settings</span></button>
+        <div class="privacy-note"><span class="privacy-indicator"></span><div><strong data-i18n="private">Private by design</strong><small data-i18n="privateCaption">Your archive stays on this device</small></div></div>
+      </div>
+    </aside>
+    <main class="main">
+      <div class="topbar">
+        <div class="crumb"><span class="crumb-dot"></span><span data-i18n="space">Personal space</span><span class="crumb-slash">/</span><span id="crumbCurrent">Overview</span></div>
+        <div class="top-actions">
+          <button class="text-button" id="languageButton" title="Language">EN / فا</button>
+          <button class="round-button" id="themeButton" title="Theme" aria-label="Toggle theme">◐</button>
+          <span class="avatar" title="Local workspace">V</span>
+        </div>
+      </div>
+      <div class="content">
+        <section class="view is-active" id="view-overview">
+          <div class="hero"><div class="eyebrow"><span class="eyebrow-line"></span><span data-i18n="yourSpace">YOUR SPACE, REIMAGINED</span></div><div class="hero-row"><div><h1 id="greeting">A clearer way to browse.</h1><p data-i18n="subtitle">Everything important, beautifully in its place.</p></div><div class="today" id="today"></div></div></div>
+          <label class="search-wrap"><span class="search-icon">⌕</span><input id="globalSearch" autocomplete="off" spellcheck="false" data-i18n-placeholder="search" placeholder="Search tabs, chats and bookmarks..."><kbd> / </kbd></label>
+          <div class="stats" id="stats"></div>
+          <div class="section-heading"><div><span class="overline" data-i18n="smartOverview">SMART OVERVIEW</span><h2 data-i18n="needsAttention">Needs your attention</h2></div><button class="quiet-button" id="refreshReview"><span data-i18n="refresh">Refresh</span> ↻</button></div>
+          <div class="review-area" id="reviewList"></div>
+          <div class="dashboard-grid">
+            <div class="panel"><div class="panel-title"><div><span class="overline" data-i18n="flow">YOUR FLOW</span><h3 data-i18n="activeSpaces">Active spaces</h3></div><button class="quiet-button" data-go="tabs" data-i18n="viewAll">View all</button></div><div id="overviewGroups"></div></div>
+            <div class="panel"><div class="panel-title"><div><span class="overline" data-i18n="recentCaptures">RECENT CAPTURES</span><h3 data-i18n="chatLibrary">AI chat library</h3></div><button class="quiet-button" data-go="chats" data-i18n="viewAll">View all</button></div><div id="overviewChats"></div></div>
+          </div>
+        </section>
+        <section class="view" id="view-tabs"><div class="page-header"><div><span class="overline" data-i18n="browserManagement">BROWSER MANAGEMENT</span><h1 data-i18n="tabs">Open tabs</h1><p data-i18n="tabsHelp">Browse domains, find duplicates, and bring order to your workspace.</p></div><button class="primary-button" id="reviewTabs"><span data-i18n="reviewNow">Review tabs</span></button></div><div id="allTabs"></div></section>
+        <section class="view" id="view-chats"><div class="page-header"><div><span class="overline">AI ARCHIVE</span><h1 data-i18n="chats">AI conversations</h1><p data-i18n="chatsHelp">An offline library of the conversations you chose to save.</p></div><button class="primary-button" id="goCaptureSettings"><span data-i18n="captureSettings">Capture settings</span></button></div><div id="allChats"></div></section>
+        <section class="view" id="view-bookmarks"><div class="page-header"><div><span class="overline">YOUR LIBRARY</span><h1 data-i18n="bookmarks">Bookmarks</h1><p data-i18n="bookmarkHelp">Search existing Chrome bookmarks without moving or deleting them.</p></div></div><div id="allBookmarks"></div></section>
+        <section class="view" id="view-clips"><div class="page-header"><div><span class="overline">KEEP FOR LATER</span><h1 data-i18n="clips">Saved clips</h1><p data-i18n="clipsHelp">Select text or right-click a link and save it to Veyra.</p></div></div><div id="allClips"></div></section>
+        <section class="view" id="view-settings"><div class="page-header"><div><span class="overline">PERSONALIZATION</span><h1 data-i18n="settings">Settings</h1><p data-i18n="settingsHelp">A quiet interface, with control over every permission.</p></div></div>
+          <div class="settings-layout">
+            <div class="setting-card"><div class="setting-top"><div><h3 data-i18n="captureSettings">Capture settings</h3><p data-i18n="captureHelp">Enable automatic capture for individual AI sites. Only visible conversations are saved, locally.</p></div></div><div id="providerSettings"></div></div>
+            <div class="setting-card"><div class="setting-top"><div><h3>Laya <span class="soft-badge">Local AI</span></h3><p data-i18n="layaHelp">Optional decision engine on your own computer. Suggestions only; never deletes items automatically.</p></div></div><div class="setting-row"><div><strong data-i18n="enableLaya">Enable local Laya</strong><small>127.0.0.1:8000</small></div><button class="switch" role="switch" id="layaSwitch" aria-checked="false" aria-label="Enable Laya"><span></span></button></div><div class="hint" data-i18n="layaOffline">Install and start Laya separately. No cloud API is used.</div></div>
+            <div class="setting-card"><div class="setting-top"><div><h3 data-i18n="appearance">Appearance & language</h3><p data-i18n="appearanceHelp">Switch the interface instantly between Persian RTL and English LTR.</p></div></div><div class="setting-row"><strong data-i18n="language">Language</strong><select id="languageSelect"><option value="en">English</option><option value="fa">فارسی</option></select></div><div class="setting-row"><strong data-i18n="theme">Theme</strong><select id="themeSelect"><option value="system" data-i18n="system">System</option><option value="light" data-i18n="light">Light</option><option value="dark" data-i18n="dark">Dark</option></select></div></div>
+            <div class="setting-card"><div class="setting-top"><div><h3 data-i18n="backup">Backup & portability</h3><p data-i18n="backupHelp">Export or restore chats and clips as an open JSON file.</p></div></div><div class="setting-row"><button class="outline-button" id="exportBackup" data-i18n="export">Export backup</button><button class="outline-button" id="importBackup" data-i18n="import">Import backup</button><input type="file" id="backupInput" accept="application/json,.json" hidden></div></div>
+            <div class="setting-card"><div class="setting-top"><div><h3 data-i18n="history">Recent history</h3><p data-i18n="historyHelp">History access is optional and requires your permission.</p></div></div><div class="setting-row"><button class="outline-button" id="enableHistory" data-i18n="showHistory">Show recent history</button></div><div id="historyList"></div></div>
+          </div>
+        </section>
+      </div>
+      <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    </main>
+  </div>
+  <dialog id="chatDialog" class="chat-dialog"><div class="dialog-header"><h2 id="dialogTitle"></h2><button id="closeDialog" aria-label="Close">×</button></div><div id="dialogBody"></div><div class="dialog-footer"><button class="outline-button" id="downloadChat" data-i18n="downloadMarkdown">Download Markdown</button></div></dialog>
+</body>
+</html>
