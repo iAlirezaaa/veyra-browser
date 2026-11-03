@@ -92,3 +92,17 @@ test('manual capture responds with status to popup and diagnostic caller',async(
  for(let i=0;i<8;i++)await Promise.resolve();
  assert.equal(resolved?.status,'saved');
 });
+test('1200 visible DOM messages are sent in bounded overlapping batches, and updates resend only changed windows',async()=>{
+ const scene=mockCapture('https://chatgpt.com/c/very-long');
+ for(let i=0;i<1200;i++)scene.nodes.push(scene.node(i%2?'assistant':'user',`Long chat message ${i} with unique content and some details`));
+ await scene.tick();
+ for(let i=0;i<250;i++)await Promise.resolve();
+ const first=scene.saves().length;
+ assert.ok(first>=15,`Expected many chunks, got ${first}`);
+ assert.ok(scene.saves().every(s=>s.payload.messages.length<=72));
+ scene.intervals[0]();await scene.tick();assert.equal(scene.saves().length,first);
+ scene.nodes.push(scene.node('user','A completely new final question that must append to the stored chat'));
+ scene.mutate();await scene.tick();
+ assert.ok(scene.saves().length>first);
+ assert.ok(scene.saves().length<=first+2);
+});

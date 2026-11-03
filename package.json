@@ -1,12 +1,12 @@
 {
   "name": "veyra-browser",
   "private": true,
-  "version": "0.1.6",
+  "version": "0.1.7",
   "type": "module",
   "description": "Local-first bilingual browser workspace",
   "scripts": {
     "test": "node --test tests/*.test.js",
-    "check": "node --check src/background.js && node --check src/content/capture.js && node --check src/ui/app.js && node --check src/ui/popup.js && node --check src/ui/appearance.js && node --check src/archive.js && node --check src/ui/folder-sync.js && node --check src/tab-workspace.js && node --check src/core.js && node --check src/db.js && node --check src/laya.js && npm test && node --check src/tab-organizer.js && node --check src/message-auth.js",
+    "check": "node --check src/background.js && node --check src/content/capture.js && node --check src/ui/app.js && node --check src/ui/popup.js && node --check src/ui/appearance.js && node --check src/archive.js && node --check src/ui/folder-sync.js && node --check src/tab-workspace.js && node --check src/core.js && node --check src/db.js && node --check src/laya.js && npm test && node --check src/tab-organizer.js && node --check src/message-auth.js && node --check src/chat-sync.js",
     "package": "python3 scripts/package.py"
   },
   "engines": {

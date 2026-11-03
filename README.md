@@ -82,3 +82,11 @@ Version 0.1.5 incorrectly rejected its own dashboard requests because Chrome cor
 **Install:** [Download Chrome ZIP v0.1.6](dist/veyra-v0.1.6-chrome.zip), extract over your **existing** Veyra extension folder, Reload on `chrome://extensions`, then refresh/open a new dashboard tab. When Chrome requires approval for the `tabGroups` permission, accept and re-enable the extension. Try Open tabs → Organize Chrome tabs with two eligible web tabs.
 
 **Validation:** The regression now has an explicit background-message test. Unit/contract tests pass; live interaction in your own browser is not yet confirmed. See [ADR 0003](docs/decisions/0003-dashboard-message-authorization.md) and [installation guide](INSTALL.md).
+
+## v0.1.7 — Incremental synchronization for long AI conversations
+
+Veyra now merges new and edited DOM turns into the same canonical local conversation record rather than overwriting it with the currently visible window. Capture transmits bounded, overlapping batches (up to 5,000 currently loaded turns per scan), with a protective archive maximum of 20,000 turns or 24 million characters. Streamed responses and later follow-ups can update the same chat. If older messages are virtualized out of the site's DOM, Veyra preserves the archived content and refuses to guess an unanchored fragment's location. For large conversations, Downloads exports produce numbered Markdown parts instead of skipping oversized files. The chat viewer loads the newest 120 messages first, with an option to show more.
+
+[Download Veyra 0.1.7 Chrome ZIP](dist/veyra-v0.1.7-chrome.zip) · [Installation instructions](INSTALL.md)
+
+**Limitations:** Explicit per-provider capture permission is still required. Historical messages never rendered in the page cannot be recovered through DOM capture. Real-site end-to-end compatibility remains unverified; automated tests exercise modeled extraction, merging, Chrome API messaging and archive export.

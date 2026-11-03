@@ -96,21 +96,44 @@ test('tab actions assign, group by category, and exclude existing Chrome groups'
  assert.match(denied.error,/New Tab dashboard/);
 });
 
-test('legitimate newtab messages with sender.tab are accepted for combined Chrome organization',async()=>{
+
+test('newtab messages with tab sender are trusted and can invoke combined Chrome organization',async()=>{
  const dashboard={id:'veyra-test-extension',url:'chrome-extension://veyra-test-extension/src/ui/newtab.html',tab:{id:99,url:'chrome-extension://veyra-test-extension/src/ui/newtab.html'}};
- const reply=await send({type:'TAB_ORGANIZE_CHROME'},dashboard);
- assert.equal(reply.ok,true,reply.error);
- assert.equal(reply.data.verified,true);
- assert.ok(Array.isArray(reply.data.errors));
+ const response=await send({type:'TAB_ORGANIZE_CHROME'},dashboard);
+ assert.equal(response.ok,true, response.error);
+ assert.equal(response.data.verified,true);
+ assert.ok(Array.isArray(response.data.errors));
  const auto=await send({type:'TAB_AUTO_ORGANIZE',enabled:false},dashboard);
- assert.equal(auto.ok,true,auto.error);
+ assert.equal(auto.ok,true, auto.error);
 });
-test('untrusted content scripts and forged senders cannot manage Chrome tab groups',async()=>{
+
+test('untrusted tab, content script and spoofed extension sender cannot organize Chrome tabs',async()=>{
  const attempts=[
-  {id:'veyra-test-extension',url:'https://chatgpt.com/c/x',tab:{id:3,url:'https://chatgpt.com/c/x'}},
-  {id:'evil-extension',url:'chrome-extension://veyra-test-extension/src/ui/newtab.html',tab:{id:3,url:'chrome-extension://veyra-test-extension/src/ui/newtab.html'}},
-  {id:'veyra-test-extension',url:'chrome-extension://veyra-test-extension/src/ui/newtab.html.evil'},
-  {id:'veyra-test-extension',url:'chrome-extension://veyra-test-extension/src/ui/popup.html'}
+ {id:'veyra-test-extension',url:'https://chatgpt.com/c/x',tab:{id:3,url:'https://chatgpt.com/c/x'}},
+ {id:'evil-extension',url:'chrome-extension://veyra-test-extension/src/ui/newtab.html',tab:{id:3,url:'chrome-extension://veyra-test-extension/src/ui/newtab.html'}},
+ {id:'veyra-test-extension',url:'chrome-extension://veyra-test-extension/src/ui/newtab.html.evil'},
+ {id:'veyra-test-extension',url:'chrome-extension://veyra-test-extension/src/ui/popup.html'}
  ];
  for(const sender of attempts){const reply=await send({type:'TAB_ORGANIZE_CHROME'},sender);assert.equal(reply.ok,false,JSON.stringify(sender));}
+});
+test('partial late window appends to the same persistent chat without losing 650 stored turns',async()=>{
+ const url='https://chatgpt.com/c/long-case';
+ const initial=Array.from({length:650},(_,i)=>({role:i%2?'assistant':'user',text:`Specific stored turn number ${i}: ${'information '.repeat(5)}`}));
+ for(let start=0;start<initial.length;start+=68){
+   const part=initial.slice(Math.max(0,start-4),Math.min(start+68,initial.length));
+   const reply=await send({type:'SAVE_CHAT',payload:{platform:'chatgpt',url,title:'long test',messages:part}});
+   assert.equal(reply.ok,true,reply.error);
+ }
+ const id='chat:https://chatgpt.com/c/long-case';
+ let got=(await send({type:'GET_CHAT',id})).data;
+ assert.equal(got.messages.length,650);
+ const tail=initial.slice(-5);
+ const append=await send({type:'SAVE_CHAT',payload:{platform:'chatgpt',url,title:'long test',messages:[...tail,{role:'user',text:'One entirely new appended user question after 650 earlier turns.'}]}});
+ assert.equal(append.ok,true,append.error);assert.equal(append.data.count,651);
+ got=(await send({type:'GET_CHAT',id})).data;
+ assert.equal(got.messages.length,651);
+ assert.equal(got.messages[0].text,initial[0].text.trim());
+ const repeat=await send({type:'SAVE_CHAT',payload:{platform:'chatgpt',url,title:'long test',messages:tail}});
+ assert.equal(repeat.data.reason,'Unchanged');
+ assert.equal((await send({type:'GET_CHAT',id})).data.messages.length,651);
 });

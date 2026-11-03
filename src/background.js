@@ -7,10 +7,13 @@ import { toMarkdown } from './core.js';
 import {sanitizeCategories, DEFAULT_CATEGORIES, TAB_SORTS, assignUrlCategory, tabCategory} from './tab-workspace.js';
 import {organizeChromeTabs} from './tab-organizer.js';
 import {isTrustedDashboardSender} from './message-auth.js';
+import {mergeCapturedMessages,normalizeMessages,MAX_CHAT_MESSAGES,MAX_CHAT_CHARS} from './chat-sync.js';
+import {markdownParts} from './archive.js';
 
 const DEFAULTS={language:'en',theme:'system',capture:{},layaEnabled:false,autoReview:true,rtlSites:{},dismissed:{},activity:{},exportMode:'local',downloadsFolder:'Veyra/AI-Chats',tabCategories:DEFAULT_CATEGORIES,tabAssignments:{},tabSort:'category',autoOrganizeTabs:false};
 const EXPORT_ALARM='veyra-export';
 const HEALTH_STATES=new Set(['waiting-url','no-messages','saved','skipped','error','active']);
+const saveQueues=new Map();
 const CAPTURE_SCRIPT_PREFIX='veyra-capture-';
 const getSettings=async()=>({ ...DEFAULTS,...(await chrome.storage.local.get('settings')).settings });
 async function patchSettings(patch) {
@@ -74,7 +77,7 @@ async function captureHealth(payload,sender){
   const old=(await chrome.storage.local.get('captureHealth')).captureHealth||{};
   const record={...old,[site]:{
     status,detail:String(payload.detail||'').slice(0,140),
-    count:Math.min(Math.max(Number(payload.count)||0,0),600),
+    count:Math.min(Math.max(Number(payload.count)||0,0),MAX_CHAT_MESSAGES),
     checkedAt:new Date().toISOString(),tabId:sender.tab.id
   }};
   await chrome.storage.local.set({captureHealth:record});
@@ -112,31 +115,40 @@ async function saveChat(payload,sender) {
   const site=providerFromUrl(source),config=await getSettings();
   if(!site || !config.capture?.[site] || payload.platform!==site) throw new Error('Capture not enabled for this site');
   if(!payload.url || hostOf(payload.url)!==hostOf(source)) throw new Error('Invalid source URL');
-  // The first messages can exist before a React SPA assigns its /c/ URL.
-  // Keep an opt-in, tab-local draft and migrate it to the canonical URL later.
+  // A React SPA can render turns before assigning a permanent conversation URL.
   const canonicalId=archiveId(payload.url);
   const draftId=`draft:${site}:${sender.tab.id}`;
   const id=canonicalId||draftId;
   const url=normalizeUrl(payload.url);
-  const raw=Array.isArray(payload.messages)?payload.messages.slice(0,600):[];
-  const messages=raw.filter(m=>['user','assistant'].includes(m?.role) && typeof m.text==='string' && m.text.trim())
-    .map(m=>({role:m.role,text:m.text.trim().slice(0,16000)}));
+  const messages=normalizeMessages(payload.messages);
   if(!messages.length) return {skipped:true,reason:'No visible messages'};
-  let length=0;
-  const safe=messages.filter(m=>(length+=m.text.length)<=250000);
-  if(!safe.length) return {skipped:true,reason:'Too large'};
   const previous=await dbGet('chats',id);
   const oldDraft=canonicalId ? await dbGet('chats',draftId) : null;
-  if(previous && previous.messages.length>safe.length) return {skipped:true,reason:'Partial capture'};
-  if(previous && JSON.stringify(previous.messages)===JSON.stringify(safe)) return {skipped:true,reason:'Unchanged'};
+  const starting=previous?.messages||oldDraft?.messages||[];
+  const result=mergeCapturedMessages(starting,messages);
+  if(result.reason==='unanchored')return {skipped:true,reason:'Unanchored window',count:starting.length};
+  if(result.reason==='archive-limit')return {skipped:true,reason:'Archive size limit reached; existing content preserved',count:starting.length};
+  if(!result.changed && previous) return {skipped:true,reason:'Unchanged',count:starting.length};
+  if(!result.messages.length) return {skipped:true,reason:'No visible messages'};
   const updatedAt=new Date().toISOString();
   const title=String(payload.title||site).slice(0,250);
   const archiveName=previous?.archiveName || (canonicalId ? chatArchiveName({url,title}) : `Draft-${site}-${sender.tab.id}.md`);
-  await dbPut('chats',{id,url,platform:site,title,messages:safe,archiveName,createdAt:previous?.createdAt||oldDraft?.createdAt||updatedAt,updatedAt,draft:!canonicalId});
+  await dbPut('chats',{id,url,platform:site,title,messages:result.messages,archiveName,createdAt:previous?.createdAt||oldDraft?.createdAt||updatedAt,updatedAt,draft:!canonicalId});
   if(canonicalId && oldDraft)await dbDelete('chats',draftId);
-  await chrome.storage.local.set({captureEvent:{id,platform:site,updatedAt,count:safe.length}});
+  await chrome.storage.local.set({captureEvent:{id,platform:site,updatedAt,count:result.messages.length}});
   if(config.exportMode==='downloads') await scheduleExport();
-  return {saved:true,count:safe.length};
+  return {saved:true,count:result.messages.length};
+}
+function queueChatSave(payload,sender) {
+  // Multiple content scripts/tabs may update the SAME long conversation.
+  // Serialize read/merge/write per URL to avoid lost updates in IndexedDB.
+  const site=providerFromUrl(sender?.tab?.url||'');
+  const key=archiveId(payload?.url)||`draft:${site}:${sender?.tab?.id}`;
+  const pending=saveQueues.get(key)||Promise.resolve();
+  const task=pending.catch(()=>{}).then(()=>saveChat(payload,sender));
+  saveQueues.set(key,task);
+  task.finally(()=>{if(saveQueues.get(key)===task)saveQueues.delete(key);}).catch(()=>{});
+  return task;
 }
 function markdownDataUrl(content){
   // Chrome's downloads API can write a data URL to a relative Downloads path.
@@ -149,27 +161,29 @@ async function flushDownloads() {
   if(!dir)throw new Error('Invalid Downloads subfolder');
   const [chats,receipts]=await Promise.all([dbAll('chats'),dbAll('receipts')]);
   const byId=new Map(receipts.map(x=>[x.id,x]));
-  let started=0;
-  for(const chat of chats.filter(x=>!x.draft).sort((a,b)=>a.updatedAt.localeCompare(b.updatedAt))){
-    const key=`download:${chat.id}`,receipt=byId.get(key);
-    const destination=downloadFilename(chat,dir);
-    if(receipt?.updatedAt===chat.updatedAt && receipt.filePath===destination && receipt.status==='complete')continue;
-    if(receipt?.updatedAt===chat.updatedAt && receipt.filePath===destination && receipt.status==='pending') {
-      const matches=await chrome.downloads.search({id:receipt.downloadId});
-      if(matches[0]?.state==='in_progress')continue;
-      if(matches[0]?.state==='complete') {
-        await dbPut('receipts',{...receipt,status:'complete'});continue;
+  let started=0, pending=false;
+  outer: for(const chat of chats.filter(x=>!x.draft).sort((a,b)=>a.updatedAt.localeCompare(b.updatedAt))){
+    const parts=markdownParts(chat);
+    for(let index=0;index<parts.length;index++) {
+      const part=parts[index];
+      const key=`download:${chat.id}:${index+1}`;
+      const receipt=byId.get(key);
+      const destination=downloadFilename({...chat,archiveName:part.filename},dir);
+      if(receipt?.updatedAt===chat.updatedAt && receipt.filePath===destination && receipt.status==='complete')continue;
+      if(receipt?.updatedAt===chat.updatedAt && receipt.filePath===destination && receipt.status==='pending') {
+        const matches=await chrome.downloads.search({id:receipt.downloadId});
+        if(matches[0]?.state==='in_progress'){pending=true;continue;}
+        if(matches[0]?.state==='complete') {
+          await dbPut('receipts',{...receipt,status:'complete'});continue;
+        }
       }
+      const downloadId=await chrome.downloads.download({url:markdownDataUrl(part.content),filename:destination,saveAs:false,conflictAction:'overwrite'});
+      await dbPut('receipts',{id:key,updatedAt:chat.updatedAt,status:'pending',downloadId,filePath:destination});
+      started++;pending=true;
+      if(started>=8)break outer;
     }
-    const text=toMarkdown(chat);
-    if(text.length>300000)continue; // never create huge data URLs
-    const downloadId=await chrome.downloads.download({url:markdownDataUrl(text),filename:destination,saveAs:false,conflictAction:'overwrite'});
-    await dbPut('receipts',{id:key,updatedAt:chat.updatedAt,status:'pending',downloadId,filePath:destination});
-    started++;
-    if(started>=8)break;
   }
-  // Recheck pending downloads even if a worker was suspended during completion.
-  if(started===8 || byId.size) await scheduleExport();
+  if(started>=8 || pending) await scheduleExport();
   await chrome.storage.local.set({exportStatus:{mode:'downloads',started,updatedAt:new Date().toISOString()}});
   return {started};
 }
@@ -205,9 +219,9 @@ async function importBackup(data) {
   let chatCount=0,clipCount=0;
   for(const item of (Array.isArray(data.chats)?data.chats:[]).slice(0,2000)) {
     if(!item.url || !Array.isArray(item.messages) || !normalizeUrl(item.url)) continue;
-    const messages=item.messages.slice(0,600).filter(m=>['user','assistant'].includes(m?.role)&&typeof m?.text==='string')
-      .map(m=>({role:m.role,text:m.text.slice(0,16000)}));
-    if(messages.some(m=>m.text)&&messages.reduce((n,m)=>n+m.text.length,0)<=250000){
+    const messages=item.messages.slice(0,MAX_CHAT_MESSAGES).filter(m=>['user','assistant'].includes(m?.role)&&typeof m?.text==='string')
+      .map(m=>({role:m.role,text:m.text.slice(0,128000),...(typeof m.sourceId==='string'?{sourceId:m.sourceId.slice(0,180)}:{})}));
+    if(messages.some(m=>m.text)&&messages.reduce((n,m)=>n+m.text.length,0)<=MAX_CHAT_CHARS){
       await dbPut('chats',{id:`chat:${normalizeUrl(item.url)}`,url:normalizeUrl(item.url),platform:providerFromUrl(item.url)||'other',title:String(item.title||'Imported conversation').slice(0,250),messages,createdAt:item.createdAt||new Date().toISOString(),updatedAt:item.updatedAt||new Date().toISOString()});chatCount++;
     }
   }
@@ -262,7 +276,7 @@ async function handle(message,sender) {
       return {settings,result};
     }
     case 'SNAPSHOT': return snapshot();
-    case 'SAVE_CHAT': return saveChat(message.payload||{},sender);
+    case 'SAVE_CHAT': return queueChatSave(message.payload||{},sender);
     case 'CAPTURE_HEALTH': return captureHealth(message,sender);
     case 'GET_REVIEW': return review();
     case 'SETTINGS': return patchSettings(message.patch||{});

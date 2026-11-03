@@ -34,3 +34,7 @@ Open a new tab → **Open tabs** → **Organize Chrome tabs**. Click confirm. If
 Previous versions blocked requests from the Veyra new-tab page because they incorrectly checked `sender.tab`. This has been corrected in v0.1.6. In `chrome://extensions`, check that the extension card shows **0.1.6**. Extract into the existing installation directory and click **Reload**. **Close old Veyra dashboard tabs and open a fresh new tab** so you are not running the old page script. Review any pending Chrome permission prompts, including Tab Groups permission, after the upgrade.
 
 If it still fails, open `chrome://extensions` → Veyra → **Service worker / Inspect views** and record the exact console error (do not share any chat text). Also check whether the operation has web tabs available: pinned tabs, internal Chrome URLs and pre-existing groups are intentionally excluded.
+
+## Version 0.1.7 — Long conversation updates
+
+Download [Veyra 0.1.7 ZIP](dist/veyra-v0.1.7-chrome.zip), extract into the **existing extension directory**, then click **Reload** in chrome://extensions and open a fresh Veyra dashboard tab. Existing locally archived chats are not cleared by this version update. Enable per-site AI capture in Settings. New replies update the same conversation. For older virtualized turns, scroll within the original AI site to make them visible. The Capture health status reports non-overlapping windows rather than silently overwriting prior content.

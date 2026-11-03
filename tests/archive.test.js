@@ -28,3 +28,13 @@ test('downloads paths cannot escape the Chrome Downloads root',()=>{
  assert.equal(cleanDownloadsFolder('Veyra/AI-Chats'),'Veyra/AI-Chats');
  assert.equal(cleanDownloadsFolder('ویرا/گفتگوها'),'ویرا/گفتگوها');
 });
+
+test('long Markdown exports split into numbered parts with all messages intact',async()=>{
+ const {markdownParts}=await import('../src/archive.js');
+ const messages=Array.from({length:80},(_,i)=>({role:i%2?'assistant':'user',text:`MARKER_${i}_`+'a'.repeat(1000)}));
+ const parts=markdownParts({url:'https://chatgpt.com/c/123',platform:'chatgpt',title:'Large transcript',updatedAt:'2026-11-03',archiveName:'large.md',messages},5500);
+ assert.ok(parts.length>10);
+ assert.equal(parts[0].filename,'large.md');assert.equal(parts[1].filename,'large--part-002.md');
+ assert.ok(parts.every(p=>p.content.length<=5500));
+ for(let i=0;i<messages.length;i++)assert.equal(parts.filter(p=>p.content.includes(`MARKER_${i}_`)).length,1);
+});

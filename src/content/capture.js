@@ -75,8 +75,24 @@
     const child = node.querySelector?.('[data-message-author-role], [data-content-search-unit-key$=":user"], [data-content-search-unit-key$=":assistant"], [data-user-message-bubble="true"]');
     return child && child !== node ? roleFor(child) : null;
   }
+  function stableMessageId(node) {
+    // Prefer message-scoped DOM identities; generic class names or test ids
+    // such as "assistant-message" are shared across turns and cannot be keys.
+    const marked = node.closest?.('[data-message-id], [data-testid^="conversation-turn-"], [data-content-search-unit-key]') || node;
+    for (const element of [node, marked]) {
+      const raw = element?.getAttribute?.('data-message-id')
+        || element?.getAttribute?.('data-content-search-unit-key')
+        || element?.getAttribute?.('data-testid');
+      if (/^(conversation-turn-[-\w]+|[-\w:.]{8,180})$/.test(String(raw || ''))
+          && !/^(assistant-message|human-message|user-message|chat-message|model-response)$/.test(raw))
+        return String(raw).slice(0,180);
+    }
+    return undefined;
+  }
   function extract() {
-    const nodes = [...document.querySelectorAll(selector)].slice(0,900);
+    // Keep a tail of the DOM for very large pages. Missing older DOM turns
+    // must never mean that their archived copies should be deleted.
+    const nodes = [...document.querySelectorAll(selector)].slice(-6000);
     const messages = [];
     for (const node of nodes) {
       if (node.closest?.('nav,aside,header,footer,[role="navigation"]')) continue;
@@ -86,12 +102,13 @@
       const role = roleFor(node);
       if (!role) continue;
       const content = node.querySelector?.('.markdown, .standard-markdown, .progressive-markdown, .prose, [data-message-content], [data-user-message-bubble="true"], .whitespace-pre-wrap, [class*="markdown"]') || node;
-      const text = String(content.innerText || content.textContent || '').trim().slice(0,16000);
+      const text = String(content.innerText || content.textContent || '').trim().slice(0,128000);
       if (!text) continue;
       if (messages.length && messages.at(-1).role === role && messages.at(-1).text === text) continue;
-      messages.push({role, text});
+      const sourceId=stableMessageId(node);
+      messages.push({role, text,...(sourceId?{sourceId}:{})});
     }
-    return messages.slice(0,600);
+    return messages.slice(-5000);
   }
   const conversationPaths = {
     chatgpt: /\/(?:c\/|g\/[^/]+\/c\/|share\/)[^/]+/i,
@@ -102,8 +119,27 @@
   };
   const validRoute = () => { try { return conversationPaths[platform].test(new URL(location.href).pathname); } catch { return false; } };
 
-  let previous = '', scheduled = null, route = location.href, inFlight = false, dirty = false;
+  let previousChunks = new Map(), scheduled = null, route = location.href, inFlight = false, dirty = false;
   let lastReport = '', lastReportAt = 0;
+  function windows(messages) {
+    // Max 72 turns and ~220k characters per message to the MV3 worker.
+    // Four repeated turns anchor each following batch without re-saving the
+    // entire chat on every token of a streaming response.
+    const batches=[];
+    for(let start=0;start<messages.length;) {
+      let end=start, size=0;
+      while(end<messages.length && end-start<72) {
+        const length=messages[end].text.length;
+        if(end>start && size+length>220000)break;
+        size+=length;end++;
+      }
+      if(end===start)end++;
+      batches.push(messages.slice(start,end));
+      if(end===messages.length)break;
+      start=Math.max(start+1,end-Math.min(4,end-start-1));
+    }
+    return batches;
+  }
   async function report(status, detail = '', count = 0) {
     const key = `${status}:${detail}:${count}`;
     if (key === lastReport && Date.now() - lastReportAt < 20000) return;
@@ -117,27 +153,40 @@
     const messages = extract();
     if (!messages.length) { await report(validRoute()?'no-messages':'waiting-url', 'No recognized message elements', 0); return {status:'no-messages'}; }
     if (!validRoute() && !messages.some(m=>m.role==='user')){await report('waiting-url','Waiting for a conversation URL');return {status:'waiting-url'};}
-    const last = messages.at(-1);
-    // Changing an earlier response must invalidate the cache too.
-    const fingerprint = JSON.stringify([location.href,messages]);
-    if (fingerprint === previous) return {status:'unchanged', count:messages.length};
     inFlight = true;
+    let updated=0;
     try {
-      const result = await chrome.runtime.sendMessage({type:'SAVE_CHAT',payload:{platform,url:location.href,title:document.title,messages}});
-      if (!result?.ok) throw new Error(result?.error || 'Background capture request failed');
-      if (result.data?.saved || result.data?.reason === 'Unchanged') {
-        previous = fingerprint;
-        await report('saved', '', messages.length);
-        return {status:'saved',count:messages.length};
+      const batches=windows(messages);
+      // Store only fingerprints successfully acknowledged by the worker.
+      // If capture fails, retry the same window on the next heartbeat.
+      for (let index=0;index<batches.length;index++) {
+        const batch=batches[index];
+        const fingerprint=JSON.stringify([location.href,batch]);
+        if (!force && previousChunks.get(index)===fingerprint) continue;
+        const response=await chrome.runtime.sendMessage({type:'SAVE_CHAT',payload:{platform,url:location.href,title:document.title,messages:batch}});
+        if(!response?.ok) throw new Error(response?.error||'Background capture request failed');
+        if(response.data?.saved || ['Unchanged','unchanged'].includes(response.data?.reason)) {
+          previousChunks.set(index,fingerprint);
+          if(response.data?.saved)updated++;
+        } else if(response.data?.reason==='Unanchored window') {
+          await report('skipped','Partial chat window has no overlap; older messages preserved',messages.length);
+          return {status:'skipped',reason:'Unanchored window',count:messages.length};
+        } else {
+          const reason=response.data?.reason||'Archive rejected the capture';
+          await report('skipped',reason,messages.length);
+          return {status:'skipped',reason,count:messages.length};
+        }
       }
-      const reason = result.data?.reason || 'Archive rejected the capture';
-      await report('skipped', reason, messages.length);
-      return {status:'skipped',reason,count:messages.length};
+      // Do not cache by route only; streaming edits earlier in the transcript
+      // must re-sync the affected window even when message count is unchanged.
+      for(const key of previousChunks.keys())if(key>=batches.length)previousChunks.delete(key);
+      if(updated || force) await report('saved', '', messages.length);
+      return {status:updated?'saved':'unchanged',count:messages.length,updated};
     } catch(error) {
       console.warn('[Veyra] Capture failed, retrying:',error?.message || error);
       await report('error',error?.message || 'Capture failed',messages.length);
-      return {status:'error',error:String(error?.message || error)};
-    } finally { inFlight = false; if(dirty){dirty=false;queue(400);} }
+      return {status:'error',error:String(error?.message||error)};
+    } finally { inFlight=false; if(dirty){dirty=false;queue(400);} }
   }
   function queue(delay = 800) { clearTimeout(scheduled); scheduled = setTimeout(() => {save().catch(console.warn);}, delay); }
   const observer = new MutationObserver(() => queue());
@@ -156,7 +205,7 @@
   });
   // React apps use pushState without popstate. Route polling is a backstop.
   const heartbeat = setInterval(() => {
-    if (location.href !== route) {route = location.href;previous = ''; queue(250);}
+    if (location.href !== route) {route = location.href;previousChunks.clear(); queue(250);}
     else if (document.visibilityState === 'visible') save().catch(console.warn);
   }, 4000);
   addEventListener('pagehide', () => {observer.disconnect(); clearTimeout(scheduled);});
