@@ -1,1 +1,1 @@
-bf6ccee251159ddbcf3ee1d8bcf57924c4e6fa9abbe922dfd481564ea399d0a6  veyra-v0.1.7-chrome.zip
+6d5216e71fe4648a77fc8ffeca6882f3256b749cb1e1def22345991784b795dc  veyra-v0.1.7-chrome.zip
