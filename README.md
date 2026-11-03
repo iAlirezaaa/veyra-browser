@@ -1,84 +1,65 @@
 # Veyra — Your browser, in order.
 
-> **Local-first · Chrome Manifest V3 · English / فارسی · Privacy-first**
+**Veyra** is a local-first, bilingual (English/Persian) Chrome Manifest V3 browser workspace. It replaces the **New Tab** page with a restrained, Apple-inspired dashboard for managing tabs, bookmarks, saved snippets, and explicitly enabled AI chat archives. Laya can optionally provide suggestions through a localhost decision endpoint.
 
-![Veyra dashboard product preview](assets/product-preview.svg)
+> Status: **working MVP source, not Chrome Web Store published or browser-tested**. Run tests and manually verify on Chrome before treating the capture adapters or Laya integration as reliable. This repository uses small adapted MIT-licensed parts from [Tab Out](https://github.com/zarazhangrui/tab-out) and [LTF Builder](https://github.com/localthink-org/localthink-builder); see [third-party notices](THIRD_PARTY_NOTICES.md). It is not an official fork of either project.
 
-*Illustrative preview of Veyra's dashboard. The UI layout is based on the current extension; displayed items and counts are sample data.*
+[فارسی / Persian instructions](README.fa.md)
 
-**Veyra** is a lightweight browser workspace replacing the New Tab page with an organized dashboard for tabs, bookmarks, clipped content, and opt-in AI conversation archives. It aims to become a modular browser management hub, not just another tab organizer.
+## Quick install (Chrome/Edge/Brave)
 
-[راهنمای فارسی](README.fa.md) · [Architecture](docs/ARCHITECTURE.md) · [Roadmap](docs/ROADMAP.md) · [Agent handoff](AGENTS.md) · [Third-party notices](THIRD_PARTY_NOTICES.md)
+1. Download or unzip `veyra-chrome-extension.zip` (or use this repository's root).
+2. Open `chrome://extensions` and turn on **Developer mode**.
+3. Select **Load unpacked**, then select the folder containing `manifest.json`.
+4. Open a **new tab**. The Veyra dashboard replaces Chrome's new-tab page.
+5. Open **Settings**. Enable capture for each chat provider you trust, granting **site-specific access** on request. No conversation capture is enabled by default.
 
-## Capabilities (MVP)
+Chrome extensions may replace `chrome://newtab` but **cannot silently take over Chrome's startup settings**. For the dashboard at browser launch, use Chrome Settings → On startup → Open the New Tab page, or configure a startup page to open the dashboard yourself.
 
-| Feature | Current scope |
-| --- | --- |
-| New-tab dashboard | Replaces Chrome's new tab page; shows active tabs, domains, bookmarks, and archives |
-| Smart review | Duplicate/idle tab suggestions with **Yes / No** decisions; no silent deletion |
-| AI chat archive | Opt-in capture for ChatGPT, Claude, Gemini, Perplexity and Grok; DOM-based and best-effort |
-| Portable knowledge | Local IndexedDB archive, JSON backup/import, Markdown conversation export |
-| Bookmarks & clips | Search Chrome bookmarks and store selected text or links |
-| Persian / English | RTL/LTR dashboard and site-specific RTL editing fields |
-| Laya decision layer | Optional localhost decision suggestions; no external model service included |
-| Privacy | On-device storage, explicit site permissions, no telemetry or account required |
+## Features
 
-**Version 0.1.2 — More reliable auto-capture and configurable storage.** Download the [Chrome extension ZIP](dist/veyra-v0.1.2-chrome.zip), extract it, then use **Load unpacked** in chrome://extensions. See [installation guide](INSTALL.md). Supports Light, Dark and System themes, saved across the dashboard and popup.
+- **New-tab workspace:** current tabs grouped by domain, quick access, bookmarks, recent AI captures and simple statistics.
+- **Tab review:** local duplicate detection, manually observed inactive pages, and **Yes/No** review cards. Closing tabs or bookmarking them is *never automatic*.
+- **AI conversations:** opt-in capture per site for ChatGPT, Claude, Gemini, Perplexity, and Grok. Current DOM extraction is **best effort**, and virtualized/changed sites may not yield complete transcripts. Capture starts only after explicit host permission. More robust export engines can be incorporated later.
+- **Local archive:** AI chats and selected text/link clips saved in IndexedDB. Conversation Markdown downloads and portable JSON backup/import.
+- **Bookmarks:** read and search existing Chrome bookmarks, save open tabs with a click.
+- **RTL tools:** enable right-to-left editing fields for a specific site with permission; also includes full RTL Persian interface.
+- **Optional history:** history is *not* requested at installation. A separate button requests permission before reading recent visits.
+- **Optional local Laya:** calls `http://127.0.0.1:8000/predict` only after explicit opt-in, and sends **only a tab title, domain and suggestion type** to the user's own local server. If Laya is absent, basic deterministic suggestions still work. Model output never triggers deletion.
+- **Background review:** an MV3 alarm reevaluates tab suggestions roughly every 10 minutes while the browser is active. MV3 background workers are not truly always running.
+- **No backend, no login, no telemetry.**
 
-### Automatically save new AI chats
+## Development
 
-1. In Veyra Settings, select **Enable automatic AI capture** and approve permissions for the supported AI sites.
-2. Start a new conversation. Veyra watches single-page-app route changes and new messages, then attempts to store conversation snapshots in its on-device IndexedDB archive.
-3. Check the latest capture status in the dashboard. Pages with new/virtualized UI may require later adapter updates.
-4. Choose one optional file destination under Settings:
-   - **Browser archive only**: no extra files, always local.
-   - **Downloads subfolder**: saves Markdown copies under a validated path relative to your Downloads directory; requires optional Downloads permission.
-   - **Selected folder**: pick any folder via browser file picker. Its handle and permission remain in the dashboard; sync occurs while Veyra dashboard is open and can resume on reopen, not in a closed-tab background worker.
-
-Exports and user-selected folders are **not uploaded to GitHub or any cloud service**. Automatic capture remains opt-in for privacy; manual permission approval is required. See [design decision](docs/decisions/0001-chat-auto-save-and-file-destination.md).
-
-**Status: early MVP.** The supplied source has automated unit and static tests. It has not yet been tested end-to-end as a Chrome Store build. Chat exporters may be incomplete on virtualized/updated third-party sites. Laya service is optional and not bundled. The periodic MV3 background review is not a continuously running process.
-
-## Install in Chrome
-
-1. Download the repository or a packaged extension release.
-2. Navigate to `chrome://extensions` and enable **Developer mode**.
-3. Click **Load unpacked** and choose the directory that contains `manifest.json`.
-4. Open a new tab for Veyra. In settings, use **Enable automatic AI capture** and approve the requested host permissions.
-
-Chrome does not allow extensions to silently change all browser startup preferences. To use the New Tab dashboard at startup, set Chrome → Settings → On startup → Open the New Tab page.
-
-## Develop
-
-Requires Node.js 20+ only to run tests. The extension itself has no npm runtime dependencies.
+No build system or npm dependencies are required to load the extension. Node.js ≥20 is only needed for tests:
 
 ```bash
 npm test
 npm run check
-npm run package
 ```
 
-### Architecture
+The package includes a GitHub Actions Node test workflow. See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), [`docs/PRODUCT_CHARTER.md`](docs/PRODUCT_CHARTER.md) and [`AGENTS.md`](AGENTS.md).
 
-- `src/ui/`: Apple-inspired minimal dashboard and popup
-- `src/background.js`: MV3 service worker, capture and periodic review
-- `src/content/`: permission-gated AI chat extraction
-- `src/db.js`: IndexedDB storage
-- `src/core.js`: deterministic grouping, duplicate detection, Markdown export
-- `src/laya.js`: optional Yes/No local decision adapter
-- `tests/`, `docs/`, `AGENTS.md`: validation and future development
+## Local Laya (optional)
 
-## Product principles
+Laya is an independent, locally hosted decision model, **not bundled with Veyra**. Review [the upstream project](https://github.com/NandhaKishorM/laya) for setup and compatible `/predict` service. Enable Laya in Settings after starting it. The adapter expects `answers.archive.noul` and optional `confidence` from the service. Keep it disabled if you do not want any tab metadata sent even to localhost. API compatibility should be checked against the actual installed Laya version.
 
-**Clear, user-controlled, reversible, extensible.** No automatic destructive action; explicit consent before browsing chat content; data is exportable; avoid unnecessary extension permissions; preserve bilingual accessibility and readable navigation.
+## Security and limits
 
-**Credits & licensing:** MIT for this repository, with original third-party license notices for adapted modules inspired by [Tab Out](https://github.com/zarazhangrui/tab-out) and [LocalThink LTF Builder](https://github.com/localthink-org/localthink-builder). See `THIRD_PARTY_NOTICES.md` before redistribution.
+Chrome's permissions are visible in `manifest.json`. Site access and history are optional. No clipboard-wide, global keystroke, password, cookie, or hidden-page collection is implemented. AI captures include only text that can be read from the displayed DOM; content parsing can break as websites change. No encryption is provided for local archives in this MVP; protect your OS profile and export backups appropriately. Incognito is not explicitly handled and should remain disabled for this extension.
 
+## Next steps
 
-## 0.1.3 — Chat capture repair & troubleshooting
+See [`docs/ROADMAP.md`](docs/ROADMAP.md) for structured plans around a full library, bidirectional connectors, stronger chat extraction, local semantic indexing and advanced Laya decisions.
 
-- Captures the newer ChatGPT/Work conversation layout (data-content-search-unit-key and user bubbles), as well as older role-marked messages. Claude message selector fallbacks are also improved.
-- Open the AI chat, click **Veyra** in the browser toolbar, then **Start saving this AI chat** and approve that site's access. The dashboard's **Settings → Capture settings → Check open AI chats** reports actual results and errors.
-- The browser archive saves to IndexedDB; disk files require **Settings → Chat storage location** and Downloads or a selected folder. The latter syncs while the Veyra dashboard is open.
-- Download the **[Veyra 0.1.3 ZIP](dist/veyra-v0.1.3-chrome.zip)** after the release workflow completes. Keep the same extension folder so local data is not separated by a new extension ID.
-- Unit and browser DOM fixture tests passed; a fully signed-in ChatGPT session has not yet been manually verified. [Technical decision](docs/decisions/0002-capture-compatibility-and-diagnostics.md).
+## License
+
+MIT, with retained notices for the adapted components. [LICENSE](LICENSE), [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+## v0.1.2 — Automatic AI capture and storage destination
+
+**Quick start:** open Settings → Capture settings → **Enable automatic capture**, approve the individual AI domain permissions, then open/start a conversation. Capture status and the last successfully saved conversation are shown on the dashboard. For already-open tabs, click **Check open AI chats**. Capture still requires explicit user approval before site access.
+
+**Storage destination:** Settings → Chat storage location provides (1) Browser only (local IndexedDB), (2) automatic Markdown export to a configurable subfolder of Chrome Downloads (optional Downloads permission, while browser is running), or (3) any user-selected folder via the browser's directory picker (mirrors when the Veyra dashboard is open and directory write access is granted; resumes on reopen). Chrome forbids extensions from silently writing to arbitrary absolute filesystem paths. The browser archive is retained regardless of the export setting. See [ADR 0001](docs/decisions/0001-chat-auto-save-and-file-destination.md).
+
+**Limitation:** DOM adapters capture visible, loaded messages rather than requesting private server-side chat history. Very long virtualized conversations may have gaps. The optional file mirrors are plaintext Markdown, so keep destination folders private.

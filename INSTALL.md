@@ -1,6 +1,6 @@
-# Installing Veyra 0.1.2 (Chrome / Edge / Brave)
+# Installing Veyra 0.1.4 (Chrome / Edge / Brave)
 
-**Installer package:** [dist/veyra-v0.1.2-chrome.zip](dist/veyra-v0.1.2-chrome.zip). It is an **unpacked extension archive**, not an executable installer and not a Chrome Web Store release.
+**Installer package:** [dist/veyra-v0.1.4-chrome.zip](dist/veyra-v0.1.4-chrome.zip). It is an **unpacked extension archive**, not an executable installer and not a Chrome Web Store release.
 
 1. Download the ZIP using GitHub's **Download raw file** action.
 2. Extract all files to a permanent folder. Confirm `manifest.json` is directly inside that folder.
@@ -14,26 +14,14 @@
 
 **Persian / فارسی:** فایل ZIP را دانلود و استخراج کنید، سپس به `chrome://extensions` بروید، Developer mode را فعال کنید و با Load unpacked پوشه حاوی `manifest.json` را انتخاب کنید. تغییر حالت روشن/تیره/سیستم از تنظیمات ویرا یا پنجره افزونه ممکن است.
 
+## Update to v0.1.4
 
-## Enable automatic conversation capture
+Download `dist/veyra-v0.1.4-chrome.zip`, extract over your **existing extension directory**, then Reload in `chrome://extensions`. Keep the original extension path to preserve its identity and locally stored chats. Make a backup before updating. If the dashboard doesn't show conversations, open Settings → Capture settings and explicitly enable the AI providers (or the one-click Enable automatic capture button).
 
-After reloading the extension, open Veyra Settings and click **Enable automatic AI capture**. Accept the explicit per-site browser permissions. Start a new ChatGPT/Claude/Gemini/Perplexity/Grok conversation and check the **last capture** indicator. For a tab already open before enabling capture, reload the AI page if necessary. Captures are stored in local browser IndexedDB.
+## Capture troubleshooting (v0.1.4)
 
-## Choose an export destination
-
-- **Browser only (default):** conversation archive stays in the Chrome profile, without writing OS files.
-- **Downloads subfolder:** enter a relative subfolder like `Veyra/Chats`, grant Downloads permission, and enable automatic Markdown exports. Absolute paths, traversal and invalid characters are rejected.
-- **Selected folder:** click **Choose folder**, pick an OS directory, and approve the browser's read/write permission. Sync happens from the Veyra dashboard when open and resumes at next dashboard visit; background arbitrary-folder writes are not possible while the dashboard is closed.
-
-Do not uninstall your old extension before exporting a backup. The v0.1.2 build is an early developer-mode build, not a Chrome Web Store verified installer.
-
-
-## Chat capture v0.1.3
-
-1. Replace the files **inside the existing extension folder**, then reload the Veyra extension in chrome://extensions. Reload the AI chat tab too.
-2. On an AI conversation tab, open the Veyra toolbar popup and select **Start saving this AI chat**. Approve the requested origin access.
-3. Open Veyra Dashboard → Settings → Capture settings → **Check open AI chats**. Inspect the per-provider status. no-messages means that no known DOM message markers were found; waiting-url means the conversation has not yet received a stable URL; error has a diagnostic reason.
-4. Chat archives stay in the browser by default. To write Markdown to disk, choose **Downloads subfolder** for background export or **Selected folder** for sync while Veyra is open.
-5. Do not delete your old extension before exporting a JSON backup. If the installed extension ID changes, your old archives will remain isolated in the previous profile's extension data.
-
-Download [v0.1.3 Chrome ZIP](dist/veyra-v0.1.3-chrome.zip) after CI publish finishes. The signed-in real-site browser test has not been completed yet.
+1. Open Veyra → Settings → **Enable automatic capture**, grant access to the selected AI website(s). Veyra cannot silently grant browser host permissions.
+2. Start a **new** chat on one of those sites. Open Veyra → AI conversations; initial messages can appear as a draft before the site assigns a permanent URL.
+3. If nothing appears: Veyra → Settings → **Check open AI chats**. Under each provider read **Last detected / Waiting URL / No messages / Capture error**.
+4. Reload the AI tab after an extension upgrade. If the site changed its DOM, capture may require an extractor update; do not assume the archived chat is complete.
+5. The selected-folder export is separate from the internal archive: the dashboard must stay open for synchronization and the folder must remain authorized.

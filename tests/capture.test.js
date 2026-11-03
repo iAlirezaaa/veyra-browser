@@ -34,15 +34,15 @@ function mockCapture(url){
 test('new ChatGPT conversation starts saving after unique URL appears',async()=>{
  const scene=mockCapture('https://chatgpt.com/');
  scene.nodes.push(scene.node('user','شروع کنیم'));
- await scene.tick();assert.equal(scene.saves().length,0);
- assert.equal(scene.health().at(-1).status,'waiting-url');
+ await scene.tick();assert.equal(scene.saves().length,1);
+ assert.equal(scene.saves()[0].payload.url,'https://chatgpt.com/');
  scene.context.location=new URL('https://chatgpt.com/c/new123');
  scene.intervals[0]();await scene.tick();
- assert.equal(scene.saves().length,1);
+ assert.equal(scene.saves().length,2);
  scene.nodes.push(scene.node('assistant','جواب اول'));
  scene.mutate();await scene.tick();
- assert.equal(scene.saves().length,2);assert.equal(scene.saves()[1].payload.messages.length,2);
- scene.intervals[0]();await scene.tick();assert.equal(scene.saves().length,2);
+ assert.equal(scene.saves().length,3);assert.equal(scene.saves()[2].payload.messages.length,2);
+ scene.intervals[0]();await scene.tick();assert.equal(scene.saves().length,3);
 });
 test('content script retries after transient worker error and does not treat skipped as saved',async()=>{
  const scene=mockCapture('https://chatgpt.com/c/abc');scene.nodes.push(scene.node('user','retry me'));

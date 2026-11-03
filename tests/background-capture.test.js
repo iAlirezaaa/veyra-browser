@@ -29,12 +29,15 @@ globalThis.indexedDB={open(){
   queueMicrotask(()=>{r.onupgradeneeded?.();r.onsuccess?.();});return r;
 }};
 const state={settings:{capture:{chatgpt:true},exportMode:'local'}};
+const grouped=[];const moved=[];
+const sampleTabs=[{id:11,windowId:1,groupId:-1,index:0, url:'https://github.com/test',title:'GitHub',pinned:false},{id:12,windowId:1,groupId:-1,index:1,url:'https://chatgpt.com/c/group',title:'GPT',pinned:false},{id:13,windowId:1,groupId:3,index:2,url:'https://chatgpt.com/c/already',title:'Grouped',pinned:false}];
 let listener;
 const event=()=>({addListener:fn=>{}});
 globalThis.chrome={
-  storage:{local:{get:async key=>typeof key==='string'?{[key]:state[key]}:Object.fromEntries(key.map(x=>[x,state[x]])),set:async patch=>Object.assign(state,patch)}},
+  storage:{local:{get:async key=>typeof key==='string'?{[key]:state[key]}:Object.fromEntries(key.map(x=>[x,state[x]])),set:async patch=>Object.assign(state,patch),remove:async key=>delete state[key]}},
   runtime:{onMessage:{addListener:fn=>listener=fn},onInstalled:event(),onStartup:event()},
-  tabs:{query:async()=>[],get:async()=>({}),onActivated:event(),onCreated:event(),onRemoved:event(),onUpdated:event()},
+  tabs:{query:async()=>sampleTabs,get:async(id)=>sampleTabs.find(t=>t.id===id)||{},group:async args=>{grouped.push(args);return 77},move:async(id,opts)=>{moved.push({id,opts})},onActivated:event(),onCreated:event(),onRemoved:event(),onUpdated:event()},
+  tabGroups:{update:async(id,opts)=>{grouped.push({id,opts})}},
   action:{setBadgeText:async()=>{},setBadgeBackgroundColor:async()=>{}},
   alarms:{get:async()=>null,create:async()=>{},onAlarm:event()},
   downloads:{onChanged:event()},contextMenus:{onClicked:event(),removeAll:async()=>{},create:()=>{}},
@@ -65,4 +68,26 @@ test('capture reports health without collecting chat text in diagnostic telemetr
 test('background rejects messages from an unrelated domain',async()=>{
  const r=await send({type:'SAVE_CHAT',payload:{platform:'chatgpt',url:'https://chatgpt.com/c/a',messages:[{role:'user',text:'sensitive'}]}},{tab:{id:2,url:'https://evil.invalid/'}});
  assert.equal(r.ok,false);assert.match(r.error,/not enabled/);
+});
+
+test('opt-in drafts are persisted before the SPA conversation URL, then migrated',async()=>{
+  const draft=await send({type:'SAVE_CHAT',payload:{platform:'chatgpt',url:'https://chatgpt.com/',title:'New chat',messages:[{role:'user',text:'Question before route'}]}},{tab:{id:57,url:'https://chatgpt.com/'}});
+  assert.equal(draft.ok,true);assert.equal(draft.data.saved,true);
+  let result=await send({type:'SNAPSHOT'});assert.ok(result.data.chats.some(x=>x.id==='draft:chatgpt:57'));
+  const stable=await send({type:'SAVE_CHAT',payload:{platform:'chatgpt',url:'https://chatgpt.com/c/assigned',title:'New chat',messages:[{role:'user',text:'Question before route'},{role:'assistant',text:'Answer after route'}]}},{tab:{id:57,url:'https://chatgpt.com/c/assigned'}});
+  assert.equal(stable.ok,true);result=await send({type:'SNAPSHOT'});
+  assert.ok(result.data.chats.some(x=>x.id==='chat:https://chatgpt.com/c/assigned'));
+  assert.ok(!result.data.chats.some(x=>x.id==='draft:chatgpt:57'));
+});
+test('tab actions assign, group by category, and exclude existing Chrome groups',async()=>{
+ const set=await send({type:'TAB_ASSIGN',tabId:12,categoryId:'work'},{id:'extension'});
+ assert.equal(set.ok,true);assert.equal(set.data.settings.tabAssignments['https://chatgpt.com/c/group'],'work');
+ const res=await send({type:'TAB_GROUP_CHROME',categoryId:'work'},{id:'extension'});
+ assert.equal(res.ok,true);assert.equal(res.data.grouped,2);
+ assert.deepEqual(grouped[0].tabIds,[11,12]);
+ assert.equal(grouped[1].opts.title,'Work');
+ const sorted=await send({type:'TAB_REORDER_CHROME'},{id:'extension'});
+ assert.equal(sorted.ok,true);assert.ok(moved.length>=2);
+ const denied=await send({type:'TAB_ASSIGN',tabId:12,categoryId:'ai'},{tab:{id:12,url:'https://chatgpt.com/c/group'}});
+ assert.equal(denied.ok,false);
 });

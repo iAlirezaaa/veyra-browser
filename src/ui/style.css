@@ -12,3 +12,10 @@ body[data-theme="dark"]{color-scheme:dark;--bg:#11161d;--surface:#1b222d;--ink:#
 .storage-path{flex-wrap:wrap}.storage-path label{font-size:11px;font-weight:650;min-width:110px}.storage-path input{flex:1;min-width:150px;max-width:100%;background:var(--hover);border:1px solid var(--line);border-radius:8px;color:var(--ink);font-size:11px;padding:9px}
 #exportMode{max-width:240px}.setting-row label{font-size:11px;font-weight:650}
 @media(max-width:700px){#exportMode{max-width:160px}.capture-actions>button{flex:1}}
+
+/* Categorization controls: compact, accessible, bilingual. */
+.tab-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:-4px 0 20px}.tab-toolbar label{font-size:11px;font-weight:700;color:var(--soft)}.tab-toolbar select,.tab-category-select,.category-form select,.category-form input{background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:9px;padding:9px;font-size:11px}
+.tab-toolbar select{min-width:155px}.tab-category-select{max-width:115px;padding:7px}.category-header-actions{display:flex;align-items:center;gap:12px}.category-header-actions .outline-button{padding:7px 10px}
+.category-dot{display:inline-block;width:11px;height:11px;border-radius:50%;margin-inline-end:10px;background:#b0b4bf}.color-blue{background:#6b91ef}.color-grey{background:#adb2bc}.color-red{background:#ef7c75}.color-yellow{background:#efc76d}.color-green{background:#72bc89}.color-pink{background:#e995bb}.color-purple{background:#a38aec}.color-cyan{background:#73cdd5}.color-orange{background:#eab077}
+.category-editor{background:var(--surface);border:1px solid var(--line);padding:18px;border-radius:13px;margin-bottom:20px}.category-editor[hidden]{display:none}.category-form{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 0}.category-form input{min-width:150px;flex:1}.category-form .outline-button{white-space:nowrap}
+@media(max-width:800px){.group-head{align-items:start;gap:12px}.category-header-actions{flex-wrap:wrap;justify-content:flex-end}.tab-category-select{max-width:92px}.row-actions{flex-wrap:wrap;justify-content:end}}

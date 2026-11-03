@@ -46,6 +46,7 @@
       '[data-role="user"]', '[data-role="assistant"]'
     ]
   };
+  selectors.chatgpt.push('article[data-testid^="conversation-turn"]');
   const selector = selectors[platform].join(', ');
   const roles = new Set(['user', 'assistant']);
 
@@ -59,6 +60,7 @@
     if (/(?:^|:)user$/.test(key)) return 'user';
     if (/(?:^|:)assistant$/.test(key)) return 'assistant';
     if (node.getAttribute('data-user-message-bubble') === 'true') return 'user';
+    if (node.querySelector?.('[data-user-message-bubble="true"]') && !node.querySelector?.('[data-message-author-role="assistant"]'))return 'user';
     const testId = String(node.getAttribute('data-testid') || node.getAttribute('data-test-id') || '').toLowerCase();
     if (/(?:^|[-_])(user|human)(?:[-_]|$)|^query$/.test(testId)) return 'user';
     if (/(?:^|[-_])(assistant|ai|answer)(?:[-_]|$)|^answer$/.test(testId)) return 'assistant';
@@ -100,7 +102,7 @@
   };
   const validRoute = () => { try { return conversationPaths[platform].test(new URL(location.href).pathname); } catch { return false; } };
 
-  let previous = '', scheduled = null, route = location.href, inFlight = false;
+  let previous = '', scheduled = null, route = location.href, inFlight = false, dirty = false;
   let lastReport = '', lastReportAt = 0;
   async function report(status, detail = '', count = 0) {
     const key = `${status}:${detail}:${count}`;
@@ -110,12 +112,14 @@
     catch { /* A closed extension context must not break page behavior. */ }
   }
   async function save(force = false) {
-    if (inFlight || (!force && document.visibilityState === 'hidden')) return {status:'busy'};
-    if (!validRoute()) { await report('waiting-url'); return {status:'waiting-url'}; }
+    if (inFlight) { dirty = true; return {status:'busy'}; }
+    if (!force && document.visibilityState === 'hidden') return {status:'busy'};
     const messages = extract();
-    if (!messages.length) { await report('no-messages', 'No recognized message elements', 0); return {status:'no-messages'}; }
+    if (!messages.length) { await report(validRoute()?'no-messages':'waiting-url', 'No recognized message elements', 0); return {status:'no-messages'}; }
+    if (!validRoute() && !messages.some(m=>m.role==='user')){await report('waiting-url','Waiting for a conversation URL');return {status:'waiting-url'};}
     const last = messages.at(-1);
-    const fingerprint = `${location.href}|${messages.length}|${last.role}|${last.text}`;
+    // Changing an earlier response must invalidate the cache too.
+    const fingerprint = JSON.stringify([location.href,messages]);
     if (fingerprint === previous) return {status:'unchanged', count:messages.length};
     inFlight = true;
     try {
@@ -133,7 +137,7 @@
       console.warn('[Veyra] Capture failed, retrying:',error?.message || error);
       await report('error',error?.message || 'Capture failed',messages.length);
       return {status:'error',error:String(error?.message || error)};
-    } finally { inFlight = false; }
+    } finally { inFlight = false; if(dirty){dirty=false;queue(400);} }
   }
   function queue(delay = 800) { clearTimeout(scheduled); scheduled = setTimeout(() => {save().catch(console.warn);}, delay); }
   const observer = new MutationObserver(() => queue());

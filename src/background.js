@@ -4,10 +4,11 @@ import { layaKeepSuggestion } from './laya.js';
 import { updateBadge } from './vendor/tabout-badge.js';
 import { archiveId, isConversationUrl, chatArchiveName, cleanDownloadsFolder, downloadFilename } from './archive.js';
 import { toMarkdown } from './core.js';
+import {sanitizeCategories, DEFAULT_CATEGORIES, TAB_SORTS, assignUrlCategory, orderedTabs, tabCategory} from './tab-workspace.js';
 
-const DEFAULTS={language:'en',theme:'system',capture:{},layaEnabled:false,autoReview:true,rtlSites:{},dismissed:{},activity:{},exportMode:'local',downloadsFolder:'Veyra/AI-Chats'};
+const DEFAULTS={language:'en',theme:'system',capture:{},layaEnabled:false,autoReview:true,rtlSites:{},dismissed:{},activity:{},exportMode:'local',downloadsFolder:'Veyra/AI-Chats',tabCategories:DEFAULT_CATEGORIES,tabAssignments:{},tabSort:'category'};
 const EXPORT_ALARM='veyra-export';
-const HEALTH_STATES=new Set(['waiting-url','no-messages','saved','skipped','error']);
+const HEALTH_STATES=new Set(['waiting-url','no-messages','saved','skipped','error','active']);
 const CAPTURE_SCRIPT_PREFIX='veyra-capture-';
 const getSettings=async()=>({ ...DEFAULTS,...(await chrome.storage.local.get('settings')).settings });
 async function patchSettings(patch) {
@@ -48,15 +49,18 @@ async function syncCaptureScripts() {
     if(permitted.length) scripts.push({id:CAPTURE_SCRIPT_PREFIX+key,js:['src/content/capture.js'],matches:permitted,runAt:'document_idle',allFrames:false,persistAcrossSessions:true});
   }
   if(scripts.length) await chrome.scripting.registerContentScripts(scripts);
-  // Dynamic registrations apply to future document loads; already-open AI tabs
-  // must be injected immediately after a user grants permission.
+  // A newly granted permission does not inject dynamically registered scripts
+  // into pages that were already open. Run them there explicitly and surface errors.
   const tabs=await chrome.tabs.query({});
+  const errors=[];
   for(const tab of tabs){
     if(!tab.id || !tab.url)continue;
     if(!scripts.some(script=>script.matches.some(pattern=>tab.url.startsWith(pattern.slice(0,-1)))))continue;
     try { await chrome.scripting.executeScript({target:{tabId:tab.id},files:['src/content/capture.js']}); }
-    catch { /* Protected tabs, discarded tabs, or navigations may reject injection. */ }
+    catch(error){errors.push({tabId:tab.id,error:String(error?.message||error).slice(0,140)});}
   }
+  if(errors.length)await chrome.storage.local.set({captureInjectionErrors:errors.slice(0,12)});
+  else await chrome.storage.local.remove('captureInjectionErrors');
   return scripts.map(s=>s.id);
 }
 async function captureHealth(payload,sender){
@@ -84,10 +88,12 @@ async function captureOpenTabs(){
     try {
       // First, a registered script will auto-inject into new pages; this
       // request triggers a fresh check in already-open conversations.
+      try{ await chrome.scripting.executeScript({target:{tabId:tab.id},files:['src/content/capture.js']}); }
+      catch(error){ throw new Error(`Cannot inject capture script: ${error.message||error}`); }
       const result=await chrome.tabs.sendMessage(tab.id,{type:'VEYRA_CAPTURE_NOW'});
       results.push({platform,status:result?.status||'unknown',count:result?.count||0});
     }catch(error){
-      const detail='Capture script could not be reached; reload the AI tab or check site access';
+      const detail=String(error.message||error).slice(0,140);
       const old=(await chrome.storage.local.get('captureHealth')).captureHealth||{};
       await chrome.storage.local.set({captureHealth:{...old,[platform]:{status:'error',detail,checkedAt:new Date().toISOString(),tabId:tab.id}}});
       results.push({platform,status:'error',reason:detail});
@@ -104,8 +110,11 @@ async function saveChat(payload,sender) {
   const site=providerFromUrl(source),config=await getSettings();
   if(!site || !config.capture?.[site] || payload.platform!==site) throw new Error('Capture not enabled for this site');
   if(!payload.url || hostOf(payload.url)!==hostOf(source)) throw new Error('Invalid source URL');
-  const id=archiveId(payload.url);
-  if(!id || !isConversationUrl(payload.url,site)) return {skipped:true,reason:'Conversation URL not assigned yet'};
+  // The first messages can exist before a React SPA assigns its /c/ URL.
+  // Keep an opt-in, tab-local draft and migrate it to the canonical URL later.
+  const canonicalId=archiveId(payload.url);
+  const draftId=`draft:${site}:${sender.tab.id}`;
+  const id=canonicalId||draftId;
   const url=normalizeUrl(payload.url);
   const raw=Array.isArray(payload.messages)?payload.messages.slice(0,600):[];
   const messages=raw.filter(m=>['user','assistant'].includes(m?.role) && typeof m.text==='string' && m.text.trim())
@@ -115,12 +124,14 @@ async function saveChat(payload,sender) {
   const safe=messages.filter(m=>(length+=m.text.length)<=250000);
   if(!safe.length) return {skipped:true,reason:'Too large'};
   const previous=await dbGet('chats',id);
+  const oldDraft=canonicalId ? await dbGet('chats',draftId) : null;
   if(previous && previous.messages.length>safe.length) return {skipped:true,reason:'Partial capture'};
   if(previous && JSON.stringify(previous.messages)===JSON.stringify(safe)) return {skipped:true,reason:'Unchanged'};
   const updatedAt=new Date().toISOString();
   const title=String(payload.title||site).slice(0,250);
-  const archiveName=previous?.archiveName || chatArchiveName({url,title});
-  await dbPut('chats',{id,url,platform:site,title,messages:safe,archiveName,createdAt:previous?.createdAt||updatedAt,updatedAt});
+  const archiveName=previous?.archiveName || (canonicalId ? chatArchiveName({url,title}) : `Draft-${site}-${sender.tab.id}.md`);
+  await dbPut('chats',{id,url,platform:site,title,messages:safe,archiveName,createdAt:previous?.createdAt||oldDraft?.createdAt||updatedAt,updatedAt,draft:!canonicalId});
+  if(canonicalId && oldDraft)await dbDelete('chats',draftId);
   await chrome.storage.local.set({captureEvent:{id,platform:site,updatedAt,count:safe.length}});
   if(config.exportMode==='downloads') await scheduleExport();
   return {saved:true,count:safe.length};
@@ -137,7 +148,7 @@ async function flushDownloads() {
   const [chats,receipts]=await Promise.all([dbAll('chats'),dbAll('receipts')]);
   const byId=new Map(receipts.map(x=>[x.id,x]));
   let started=0;
-  for(const chat of chats.sort((a,b)=>a.updatedAt.localeCompare(b.updatedAt))){
+  for(const chat of chats.filter(x=>!x.draft).sort((a,b)=>a.updatedAt.localeCompare(b.updatedAt))){
     const key=`download:${chat.id}`,receipt=byId.get(key);
     const destination=downloadFilename(chat,dir);
     if(receipt?.updatedAt===chat.updatedAt && receipt.filePath===destination && receipt.status==='complete')continue;
@@ -205,12 +216,63 @@ async function importBackup(data) {
   // Imported backups must never silently enable site access, capture or a model endpoint.
   if(['fa','en'].includes(data?.settings?.language)||['light','dark','system'].includes(data?.settings?.theme)) {
     const settings=await getSettings();
-    await patchSettings({language:['fa','en'].includes(data?.settings?.language)?data.settings.language:settings.language,theme:['light','dark','system'].includes(data?.settings?.theme)?data.settings.theme:settings.theme});
+    await patchSettings({language:['fa','en'].includes(data?.settings?.language)?data.settings.language:settings.language,theme:['light','dark','system'].includes(data?.settings?.theme)?data.settings.theme:settings.theme,tabCategories:Array.isArray(data?.settings?.tabCategories)?sanitizeCategories(data.settings.tabCategories):settings.tabCategories,tabSort:TAB_SORTS.includes(data?.settings?.tabSort)?data.settings.tabSort:settings.tabSort,tabAssignments:typeof data?.settings?.tabAssignments==='object'&&!Array.isArray(data.settings.tabAssignments)?Object.fromEntries(Object.entries(data.settings.tabAssignments).filter(([url,id])=>normalizeUrl(url) && sanitizeCategories(data?.settings?.tabCategories??settings.tabCategories).some(c=>c.id===id)).slice(0,2500)):settings.tabAssignments});
   }
   return {chatCount,clipCount};
 }
 async function handle(message,sender) {
   switch(message?.type) {
+    case 'TAB_ASSIGN': {
+      if(sender?.tab)throw new Error('This action is only available from the Veyra dashboard');
+      const tab=await chrome.tabs.get(Number(message.tabId));
+      if(!isWebTab(tab))throw new Error('Not a web tab');
+      const settings=await getSettings();
+      const assignments=assignUrlCategory(settings.tabAssignments,tab.url,message.categoryId,settings.tabCategories);
+      return {settings:await patchSettings({tabAssignments:assignments})};
+    }
+    case 'TAB_CATEGORIES': {
+      if(sender?.tab)throw new Error('This action is only available from the Veyra dashboard');
+      const categories=sanitizeCategories(message.categories);
+      if(!categories.length)throw new Error('At least one category is required');
+      return {settings:await patchSettings({tabCategories:categories})};
+    }
+    case 'TAB_SORT': {
+      if(sender?.tab)throw new Error('This action is only available from the Veyra dashboard');
+      if(!TAB_SORTS.includes(message.sort))throw new Error('Invalid tab sorting mode');
+      return {settings:await patchSettings({tabSort:message.sort})};
+    }
+    case 'TAB_GROUP_CHROME': {
+      if(sender?.tab)throw new Error('This action is only available from the Veyra dashboard');
+      const settings=await getSettings();
+      const category=sanitizeCategories(settings.tabCategories).find(x=>x.id===message.categoryId);
+      if(!category)throw new Error('Unknown category');
+      const all=await chrome.tabs.query({});
+      const candidates=all.filter(t=>isWebTab(t) && !t.pinned && (t.groupId===undefined||t.groupId===-1) && tabCategory(t,settings)===category.id);
+      const perWindow=new Map();
+      for(const tab of candidates){if(!perWindow.has(tab.windowId))perWindow.set(tab.windowId,[]);perWindow.get(tab.windowId).push(tab.id);}
+      let grouped=0;
+      for(const [windowId,tabIds] of perWindow){
+        if(!tabIds.length)continue;
+        const groupId=await chrome.tabs.group({tabIds,createProperties:{windowId}});
+        await chrome.tabGroups.update(groupId,{title:category.name,color:category.color});
+        grouped+=tabIds.length;
+      }
+      return {grouped};
+    }
+    case 'TAB_REORDER_CHROME': {
+      if(sender?.tab)throw new Error('This action is only available from the Veyra dashboard');
+      const settings=await getSettings();const all=await chrome.tabs.query({});
+      let moved=0;
+      const windows=[...new Set(all.map(x=>x.windowId))];
+      for(const windowId of windows){
+        // Pinned and existing grouped tabs are preserved in place. Sort only
+        // ungrouped normal tabs to prevent implicit ungrouping.
+        const available=all.filter(x=>x.windowId===windowId&&!x.pinned&&(x.groupId===undefined||x.groupId===-1)&&isWebTab(x));
+        const sorted=orderedTabs(available,settings);
+        for(const tab of sorted){await chrome.tabs.move(tab.id,{index:-1});moved++;}
+      }
+      return {moved};
+    }
     case 'SNAPSHOT': return snapshot();
     case 'SAVE_CHAT': return saveChat(message.payload||{},sender);
     case 'CAPTURE_HEALTH': return captureHealth(message,sender);
@@ -223,7 +285,7 @@ async function handle(message,sender) {
       const map=new Map(receipts.filter(x=>x.id.startsWith('folder:')).map(x=>[x.id,x]));
       const directoryId=String(message.directoryId||'').slice(0,64);
       if(!directoryId)throw new Error('Missing destination');
-      return {chats:chats.filter(c=>map.get(`folder:${c.id}`)?.updatedAt!==c.updatedAt || map.get(`folder:${c.id}`)?.directoryId!==directoryId).slice(0,8)};
+      return {chats:chats.filter(c=>!c.draft && (map.get(`folder:${c.id}`)?.updatedAt!==c.updatedAt || map.get(`folder:${c.id}`)?.directoryId!==directoryId)).slice(0,8)};
     }
     case 'ACK_FOLDER_EXPORT': {
       const chat=await dbGet('chats',message.id);
@@ -255,7 +317,7 @@ async function handle(message,sender) {
     case 'EXPORT': {
       const [chats,clips]=await Promise.all([dbAll('chats'),dbAll('clips')]);
       const settings=await getSettings();
-      return {format:'veyra-backup-v1',exportedAt:new Date().toISOString(),chats,clips,settings:{language:settings.language,theme:settings.theme}};
+      return {format:'veyra-backup-v1',exportedAt:new Date().toISOString(),chats,clips,settings:{language:settings.language,theme:settings.theme,tabCategories:settings.tabCategories,tabAssignments:settings.tabAssignments,tabSort:settings.tabSort}};
     }
     case 'IMPORT': return importBackup(message.data);
     default: throw new Error('Unsupported message');
@@ -297,6 +359,10 @@ chrome.tabs.onCreated.addListener(()=>updateBadge());
 chrome.tabs.onRemoved.addListener(()=>updateBadge());
 chrome.tabs.onUpdated.addListener((id,change,tab)=>{
   if(change.url){updateBadge();rememberActivity(id).catch(()=>{});}
-  if(change.status==='complete' && isWebTab(tab)) applyRtl(id,tab.url).catch(()=>{});
+  if(change.status==='complete' && isWebTab(tab)) {
+    applyRtl(id,tab.url).catch(()=>{});
+    // Recover from a stale dynamic registration without requiring user action.
+    getSettings().then(s=>{const site=providerFromUrl(tab.url);if(!site||!s.capture?.[site])return;return chrome.scripting.executeScript({target:{tabId:id},files:['src/content/capture.js']});}).catch(error=>console.warn('[Veyra] Chat injection:',error));
+  }
 });
 updateBadge();
