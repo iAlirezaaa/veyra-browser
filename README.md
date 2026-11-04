@@ -90,3 +90,12 @@ Veyra now merges new and edited DOM turns into the same canonical local conversa
 [Download Veyra 0.1.7 Chrome ZIP](dist/veyra-v0.1.7-chrome.zip) · [Installation instructions](INSTALL.md)
 
 **Limitations:** Explicit per-provider capture permission is still required. Historical messages never rendered in the page cannot be recovered through DOM capture. Real-site end-to-end compatibility remains unverified; automated tests exercise modeled extraction, merging, Chrome API messaging and archive export.
+
+
+## v0.1.8 — Saved Tabs library and multi-device Chrome Bookmark Sync
+
+A new **Saved tabs** area saves one browser tab or an entire named multi-tab collection, grouped under standard/custom categories. You can search, sort, rename, move, delete and restore saved items without closing the originals. **Save by open-tab category** creates one collection per existing category.
+
+These are standard folders in Chrome's bookmarks (`Other bookmarks / Veyra — Saved Tabs`). With **Bookmark Sync enabled for the same Google account**, the saved links and folders become available on the next computer, even in Chrome Bookmarks without Veyra installed. Chrome doesn't expose cloud completion status to the extension. **AI conversation text stays local**; use JSON backup/import to move chat history.
+
+See [full feature catalog and planned backlog](docs/FEATURE_CATALOG.md), [Saved Tabs behavior and migration](docs/SAVED_TABS_AND_SYNC.md), and [installation notes](INSTALL.md).

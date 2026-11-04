@@ -17,6 +17,7 @@
       <nav class="nav" id="nav">
         <button class="nav-item active" data-view="overview"><span class="nav-icon">◫</span><span data-i18n="overview">Overview</span></button>
         <button class="nav-item" data-view="tabs"><span class="nav-icon">▤</span><span data-i18n="tabs">Open tabs</span><span class="nav-count" id="navTabCount"></span></button>
+        <button class="nav-item" data-view="saved"><span class="nav-icon">▦</span><span data-i18n="savedTabs">Saved tabs</span><span class="nav-count" id="navSavedCount"></span></button>
         <button class="nav-item" data-view="chats"><span class="nav-icon">◎</span><span data-i18n="chats">AI conversations</span></button>
         <button class="nav-item" data-view="bookmarks"><span class="nav-icon">◇</span><span data-i18n="bookmarks">Bookmarks</span></button>
         <button class="nav-item" data-view="clips"><span class="nav-icon">▧</span><span data-i18n="clips">Saved clips</span></button>
@@ -49,6 +50,21 @@
           </div>
         </section>
         <section class="view" id="view-tabs"><div class="page-header"><div><span class="overline" data-i18n="browserManagement">BROWSER MANAGEMENT</span><h1 data-i18n="tabs">Open tabs</h1><p data-i18n="tabsHelp">Browse domains, find duplicates, and bring order to your workspace.</p></div><button class="primary-button" id="reviewTabs"><span data-i18n="reviewNow">Review tabs</span></button></div><div class="tab-toolbar"><label for="tabSort" data-i18n="sortBy">Sort by</label><select id="tabSort"><option value="category" data-i18n="sortCategory">Category</option><option value="domain" data-i18n="sortDomain">Domain</option><option value="title" data-i18n="sortTitle">Title</option><option value="recent" data-i18n="sortRecent">Recent</option><option value="browser" data-i18n="sortBrowser">Browser order</option></select><button class="primary-button" id="organizeChrome" data-i18n="organizeChrome">Organize Chrome tabs</button><label class="tab-auto"><input type="checkbox" id="autoOrganize"><span data-i18n="autoOrganize">Auto-organize new tabs</span></label><button class="outline-button" id="reorderChrome" data-i18n="reorderChrome">Reorder tabs in Chrome</button><button class="outline-button" id="manageCategories" data-i18n="manageCategories">Edit categories</button></div><p class="setting-help" id="organizationStatus" role="status" aria-live="polite"></p><div id="categoryEditor" class="category-editor" hidden></div><div id="allTabs"></div></section>
+
+        <section class="view" id="view-saved">
+          <div class="page-header"><div><span class="overline">CHROME BOOKMARKS</span><h1 data-i18n="savedTabs">Saved tabs</h1><p data-i18n="savedTabsHelp">Collections saved in Chrome Bookmarks and available across synced devices.</p></div><button class="outline-button" id="savedRefresh" data-i18n="savedRefresh">Refresh library</button></div>
+          <div class="panel saved-controls">
+            <div class="saved-grid">
+              <label><span data-i18n="savedDestination">Category</span><select id="savedDestination"></select></label>
+              <label><span data-i18n="savedSessionName">Collection name (optional)</span><input id="savedSessionName" type="text" maxlength="90"></label>
+              <button class="outline-button" id="newSavedCategory" data-i18n="savedCustomCategory">New category</button>
+            </div>
+            <div class="saved-buttons"><button class="primary-button" id="saveAllTabs" data-i18n="savedAll">Save open tabs</button><button class="outline-button" id="saveByCategory" data-i18n="savedByCategory">Save by open-tab category</button></div>
+            <p id="savedSyncHelp" class="hint"></p>
+          </div>
+          <div class="tab-toolbar"><span id="savedSummary" aria-live="polite"></span><label for="savedFilter" data-i18n="savedChoose">Filter category</label><select id="savedFilter"></select><label for="savedSort" data-i18n="savedSortBy">Sort</label><select id="savedSort"><option value="newest" data-i18n="savedSortNewest">Newest</option><option value="oldest" data-i18n="savedSortOldest">Oldest</option><option value="title" data-i18n="savedSortTitle">Title</option><option value="count" data-i18n="savedSortCount">Largest</option></select></div>
+          <div id="savedList"></div>
+        </section>
         <section class="view" id="view-chats"><div class="capture-banner" id="captureBanner" role="status" aria-live="polite"></div><div class="page-header"><div><span class="overline">AI ARCHIVE</span><h1 data-i18n="chats">AI conversations</h1><p data-i18n="chatsHelp">An offline library of the conversations you chose to save.</p></div><button class="primary-button" id="goCaptureSettings"><span data-i18n="captureSettings">Capture settings</span></button></div><div id="allChats"></div></section>
         <section class="view" id="view-bookmarks"><div class="page-header"><div><span class="overline">YOUR LIBRARY</span><h1 data-i18n="bookmarks">Bookmarks</h1><p data-i18n="bookmarkHelp">Search existing Chrome bookmarks without moving or deleting them.</p></div></div><div id="allBookmarks"></div></section>
         <section class="view" id="view-clips"><div class="page-header"><div><span class="overline">KEEP FOR LATER</span><h1 data-i18n="clips">Saved clips</h1><p data-i18n="clipsHelp">Select text or right-click a link and save it to Veyra.</p></div></div><div id="allClips"></div></section>

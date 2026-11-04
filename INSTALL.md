@@ -38,3 +38,12 @@ If it still fails, open `chrome://extensions` → Veyra → **Service worker / I
 ## Version 0.1.7 — Long conversation updates
 
 Download [Veyra 0.1.7 ZIP](dist/veyra-v0.1.7-chrome.zip), extract into the **existing extension directory**, then click **Reload** in chrome://extensions and open a fresh Veyra dashboard tab. Existing locally archived chats are not cleared by this version update. Enable per-site AI capture in Settings. New replies update the same conversation. For older virtualized turns, scroll within the original AI site to make them visible. The Capture health status reports non-overlapping windows rather than silently overwriting prior content.
+
+
+## v0.1.8 — Saved tabs and cross-device Chrome Bookmarks
+
+Open a new Veyra tab -> **Saved tabs**. Choose a category, optionally enter a collection name, then Save open tabs or Save by category. Single tab rows also have a Save to Veyra action. Saved collections appear in Chrome Bookmarks under `Other bookmarks / Veyra — Saved Tabs`.
+
+To access them on a second machine, sign into the **same Google Account in Chrome** and enable **Bookmarks Sync** in Chrome settings. Sync completion is controlled by Chrome and is not reported by the extension. Install Veyra on the second machine to access the dashboard, or open the bookmarks directly without it. If Chrome Sync is disabled, the data remains local. AI chat transcripts do not move this way.
+
+The unpacked extension ID has not been changed. This intentionally preserves access to existing local chat archives when upgrading in the same installation folder.
