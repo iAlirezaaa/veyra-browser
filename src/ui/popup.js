@@ -1,63 +1,37 @@
-import {applyTheme, resolveTheme, normalizeTheme} from './appearance.js';
-import {PROVIDERS, providerFromUrl} from '../core.js';
+import {applyTheme,resolveTheme,normalizeTheme} from './appearance.js';
+import {PROVIDERS,providerFromUrl,safeFilename,hostOf} from '../core.js';
+import {DEFAULT_SAVED_CATEGORIES,saveTab} from '../saved-tabs.js';
+import {cleanDownloadsFolder,pageMarkdownName} from '../archive.js';
 const $=selector=>document.querySelector(selector);
-const dict={
-  en:{caption:'A calmer place for everything in your browser.',open:'Open workspace',save:'Bookmark current tab',success:'Saved to Chrome bookmarks',error:'Not a web page',toDark:'Switch to dark mode',toLight:'Switch to light mode',failed:'Could not save appearance',captureChat:'Start saving this AI chat',captureDone:'Capture ready. New messages will be saved locally.',captureStatus:'Capture check: ',capturePermission:'Site access was not granted'},
-  fa:{caption:'همه چیز در مرورگر، مرتب و یک‌جا.',open:'باز کردن فضای کاری',save:'نشانک کردن تب فعلی',success:'در نشانک‌های کروم ذخیره شد',error:'این صفحه وب نیست',toDark:'فعال‌سازی حالت شب',toLight:'فعال‌سازی حالت روشن',failed:'تنظیم ظاهر ذخیره نشد',captureChat:'شروع ذخیره خودکار این گفتگو',captureDone:'ضبط فعال شد. پیام‌های جدید محلی ذخیره می‌شوند.',captureStatus:'وضعیت ضبط: ',capturePermission:'مجوز دسترسی سایت داده نشد'}
+const translations={
+ en:{saveHeading:'Save this tab',category:'Category',saveTab:'Save tab',saved:'Saved in',duplicate:'Already saved in',open:'Open workspace',markdown:'Save page as .md',settings:'Markdown file settings',filename:'File name pattern',filenameHint:'Use {title}, {domain} or {date}. The .md extension is added.',destination:'Save location',ask:'Ask each time',downloads:'Downloads folder',folder:'Downloads subfolder',folderHint:'Folder names under Downloads, separated by /',saveSettings:'Save Markdown settings',settingsSaved:'Markdown settings saved',saveError:'Could not save this tab',permission:'Downloads permission was not granted',pageOnly:'Open a regular web page first',mdDone:'Markdown file prepared',mdError:'Could not save the Markdown file',capture:'Start saving this AI chat',captureDone:'Capture ready. New messages will be saved locally.',captureStatus:'Capture check: ',capturePermission:'Site access was not granted',failed:'Could not update appearance',theme:'Switch theme'},
+ fa:{saveHeading:'ذخیرهٔ این تب',category:'دسته‌بندی',saveTab:'ذخیرهٔ تب',saved:'در این دسته ذخیره شد:',duplicate:'این تب از قبل در این دسته هست:',open:'باز کردن داشبورد',markdown:'ذخیرهٔ صفحه به‌صورت .md',settings:'تنظیم فایل Markdown',filename:'الگوی نام فایل',filenameHint:'از {title}، {domain} یا {date} استفاده کن؛ پسوند .md خودکار اضافه می‌شود.',destination:'محل ذخیره',ask:'هر بار بپرس',downloads:'پوشهٔ Downloads',folder:'زیرپوشه در Downloads',folderHint:'نام پوشه‌ها را با / جدا کن',saveSettings:'ذخیرهٔ تنظیمات Markdown',settingsSaved:'تنظیمات Markdown ذخیره شد',saveError:'ذخیرهٔ تب انجام نشد',permission:'مجوز Downloads داده نشد',pageOnly:'ابتدا یک صفحهٔ وب معمولی باز کن',mdDone:'فایل Markdown آمادهٔ ذخیره شد',mdError:'ذخیرهٔ فایل Markdown انجام نشد',capture:'شروع ذخیرهٔ این گفت‌وگوی هوش مصنوعی',captureDone:'ضبط آماده است؛ پیام‌های تازه محلی ذخیره می‌شوند.',captureStatus:'وضعیت ضبط: ',capturePermission:'مجوز دسترسی به سایت داده نشد',failed:'تغییر ظاهر انجام نشد',theme:'تغییر پوسته'}
 };
-let settings={language:'en',theme:'system'};
-let activeChatTab=null;let activeProvider=null;
-const media=window.matchMedia('(prefers-color-scheme: dark)');
+let settings={language:'en',theme:'system',tabCategories:[],pageMarkdownFilename:'{title}',pageMarkdownMode:'ask',pageMarkdownFolder:'Veyra/Web-Pages'};
+let activeTab=null,activeProvider=null;
+const media=matchMedia('(prefers-color-scheme: dark)');
+const t=key=>(translations[settings.language==='fa'?'fa':'en'][key]||key);
+function setStatus(message){$('#status').textContent=message}
+function categories(){const configured=Array.isArray(settings.tabCategories)?settings.tabCategories.map(x=>x?.name).filter(Boolean):[];return [...new Set([...DEFAULT_SAVED_CATEGORIES,...configured])];}
 function render(){
- const language=settings.language==='fa'?'fa':'en';
+ const language=settings.language==='fa'?'fa':'en',effective=applyTheme(settings.theme,{systemDark:media.matches});
  document.documentElement.lang=language;document.documentElement.dir=language==='fa'?'rtl':'ltr';
- const effective=applyTheme(settings.theme,{systemDark:media.matches});
- $('#caption').textContent=dict[language].caption;
- $('#openLabel').textContent=dict[language].open;
- $('#saveLabel').textContent=dict[language].save;
- $('#captureChatLabel').textContent=dict[language].captureChat;
- $('#captureChat').hidden=!activeProvider;
- const themeLabel=effective==='dark'?dict[language].toLight:dict[language].toDark;
- $('#themeLabel').textContent=themeLabel;
- $('#themeToggle').setAttribute('aria-label',themeLabel);
- $('#themeToggle').setAttribute('aria-pressed',String(effective==='dark'));
+ for(const [id,key] of Object.entries({saveHeading:'saveHeading',categoryLabel:'category',saveTab:'saveTab',openLabel:'open',saveMarkdown:'markdown',settingsHeading:'settings',filenameLabel:'filename',filenameHint:'filenameHint',destinationLabel:'destination',askLabel:'ask',downloadsLabel:'downloads',folderLabel:'folder',folderHint:'folderHint',saveSettings:'saveSettings',captureChatLabel:'capture'}))$('#'+id).textContent=t(key);
+ $('#category').replaceChildren(...categories().map(name=>{const option=document.createElement('option');option.value=name;option.textContent=name;return option;}));
+ $('#captureChat').hidden=!activeProvider;$('#themeToggle').setAttribute('aria-label',t('theme'));$('#themeToggle').setAttribute('aria-pressed',String(effective==='dark'));
+ $('#filename').value=settings.pageMarkdownFilename||'{title}';$('#folder').value=settings.pageMarkdownFolder||'Veyra/Web-Pages';
+ document.querySelectorAll('[name="destination"]').forEach(input=>input.checked=input.value===(settings.pageMarkdownMode||'ask'));
+ $('#pageTitle').textContent=activeTab?.title||activeTab?.url||'Veyra';$('#pageDomain').textContent=activeTab?.url?hostOf(activeTab.url):'';
+ updatePreview();
 }
+function updatePreview(){const value=$('#filename').value||'{title}';const out=pageMarkdownName(activeTab?.title||'Page',activeTab?.url||'https://example.com',value);$('#filenamePreview').textContent=out;}
 media.addEventListener('change',()=>{if(normalizeTheme(settings.theme)==='system')render()});
 chrome.storage.onChanged.addListener((changes,area)=>{if(area==='local'&&changes.settings?.newValue){settings={...settings,...changes.settings.newValue};render()}});
-(async()=>{try{settings={...settings,...(await chrome.storage.local.get('settings')).settings};const [tab]=await chrome.tabs.query({active:true,currentWindow:true});activeChatTab=tab;activeProvider=providerFromUrl(tab?.url||'');}catch{}render()})();
+(async()=>{try{settings={...settings,...(await chrome.storage.local.get('settings')).settings};[activeTab]=await chrome.tabs.query({active:true,currentWindow:true});activeProvider=providerFromUrl(activeTab?.url||'');}catch{}render()})();
 $('#open').addEventListener('click',()=>chrome.tabs.create({url:chrome.runtime.getURL('src/ui/newtab.html')}));
-$('#themeToggle').addEventListener('click',async()=>{
- const effective=resolveTheme(settings.theme,media.matches), next=effective==='dark'?'light':'dark';
- try{const result=await chrome.runtime.sendMessage({type:'SETTINGS',patch:{theme:next}});if(!result?.ok)throw new Error(result?.error||'Failed');settings={...settings,...result.data};render()}
- catch{$('#status').textContent=dict[settings.language==='fa'?'fa':'en'].failed}
-});
-$('#save').addEventListener('click',async()=>{
- const language=settings.language==='fa'?'fa':'en';
- try{const [tab]=await chrome.tabs.query({active:true,currentWindow:true});if(!/^https?:\/\//.test(tab?.url||''))throw new Error(dict[language].error);await chrome.bookmarks.create({title:tab.title||tab.url,url:tab.url});$('#status').textContent=dict[language].success;}
- catch(e){$('#status').textContent=e.message;}
-});
-
-$('#captureChat').addEventListener('click',async()=>{
- const language=settings.language==='fa'?'fa':'en';
- if(!activeChatTab?.id||!activeProvider)return;
- const button=$('#captureChat');button.disabled=true;
- try{
-  // Request only the site the user is viewing, not permissions for all AI sites.
-  const provider=PROVIDERS[activeProvider];
-  const match=provider.matches.find(pattern=>activeChatTab.url.startsWith(pattern.replace(/\*$/,'')));
-  if(!match)throw new Error('Unsupported URL');
-  const permission=await chrome.permissions.request({origins:[match]});
-  if(!permission)throw new Error(dict[language].capturePermission);
-  const patch={capture:{...(settings.capture||{}),[activeProvider]:true}};
-  const saved=await chrome.runtime.sendMessage({type:'SETTINGS',patch});
-  if(!saved?.ok)throw new Error(saved?.error||'Could not enable capture');
-  settings={...settings,...saved.data};
-  const scripts=await chrome.runtime.sendMessage({type:'SYNC_CAPTURE'});
-  if(!scripts?.ok)throw new Error(scripts?.error||'Could not register capture');
-  const result=await chrome.runtime.sendMessage({type:'CAPTURE_OPEN_TABS'});
-  if(!result?.ok)throw new Error(result?.error||'Could not check capture');
-  const tabResult=result.data?.tabs?.find(x=>x.platform===activeProvider);
-  $('#status').textContent=dict[language].captureDone+(tabResult?' '+dict[language].captureStatus+tabResult.status:'');
- }catch(error){$('#status').textContent=String(error?.message||error)}
- finally{button.disabled=false}
-});
+$('#themeToggle').addEventListener('click',async()=>{const next=resolveTheme(settings.theme,media.matches)==='dark'?'light':'dark';try{const result=await chrome.runtime.sendMessage({type:'SETTINGS',patch:{theme:next}});if(!result?.ok)throw Error(result?.error||'Failed');settings={...settings,...result.data};render()}catch{setStatus(t('failed'))}});
+$('#saveTab').addEventListener('click',async()=>{const button=$('#saveTab');button.disabled=true;try{if(!activeTab?.url||!/^https?:\/\//i.test(activeTab.url))throw Error(t('pageOnly'));const result=await saveTab(chrome.bookmarks,activeTab,$('#category').value);setStatus(`${t(result.duplicate?'duplicate':'saved')} ${$('#category').value}`)}catch(error){setStatus(`${t('saveError')}: ${error.message}`)}finally{button.disabled=false}});
+$('#filename').addEventListener('input',updatePreview);
+$('#saveSettings').addEventListener('click',async()=>{const mode=document.querySelector('[name="destination"]:checked')?.value||'ask',folder=cleanDownloadsFolder($('#folder').value);if(!folder){setStatus(t('folderHint'));return}try{if(mode==='downloads'&&!await chrome.permissions.contains({permissions:['downloads']})&&!await chrome.permissions.request({permissions:['downloads']}))throw Error(t('permission'));const result=await chrome.runtime.sendMessage({type:'SETTINGS',patch:{pageMarkdownFilename:$('#filename').value.trim()||'{title}',pageMarkdownMode:mode,pageMarkdownFolder:folder}});if(!result?.ok)throw Error(result?.error||'Failed');settings={...settings,...result.data};setStatus(t('settingsSaved'));render()}catch(error){setStatus(error.message)}});
+$('#saveMarkdown').addEventListener('click',async()=>{const button=$('#saveMarkdown');button.disabled=true;try{if(!activeTab?.id||!/^https?:\/\//i.test(activeTab.url||''))throw Error(t('pageOnly'));if(!await chrome.permissions.contains({permissions:['downloads']})&&!await chrome.permissions.request({permissions:['downloads']}))throw Error(t('permission'));const result=await chrome.scripting.executeScript({target:{tabId:activeTab.id},func:()=>{const clean=s=>String(s||'').replace(/\s+/g,' ').trim();const title=clean(document.title)||location.hostname;const canonical=document.querySelector('link[rel="canonical"]')?.href||location.href;const description=clean(document.querySelector('meta[name="description"]')?.content||document.querySelector('meta[property="og:description"]')?.content);const main=document.querySelector('main,article,[role="main"]')||document.body;const body=clean(main?.innerText||'').slice(0,1000000);const headings=[...document.querySelectorAll('h1,h2,h3')].slice(0,80).map(x=>`- ${clean(x.innerText)}`).filter(x=>x!=='-');const links=[...main.querySelectorAll('a[href]')].filter(a=>clean(a.innerText)).slice(0,100).map(a=>`- [${clean(a.innerText).slice(0,180)}](${a.href})`);return {title,url:canonical,description,body,headings,links,savedAt:new Date().toISOString()}}});const page=result?.[0]?.result;if(!page?.body)throw Error('No readable page content');const esc=s=>String(s||'').replace(/\\/g,'\\\\').replace(/\|/g,'\\|').replace(/\r?\n/g,' ');const content=[`# ${page.title}`,'','---',`title: "${esc(page.title)}"`,`source: "${esc(page.url)}"`,`saved: "${page.savedAt}"`,'---',...(page.description?[`\n${page.description}`]:[]),'','## Page content','',page.body,...(page.headings.length?['','## Headings','',...page.headings]:[]),...(page.links.length?['','## Links','',...page.links]:[]),''].join('\n');const name=pageMarkdownName(page.title,page.url,settings.pageMarkdownFilename);const path=settings.pageMarkdownMode==='downloads'?`${cleanDownloadsFolder(settings.pageMarkdownFolder)||'Veyra/Web-Pages'}/${name}`:name;const url='data:text/markdown;charset=utf-8,'+encodeURIComponent(content);const id=await chrome.downloads.download({url,filename:path,saveAs:settings.pageMarkdownMode!=='downloads',conflictAction:'uniquify'});await chrome.storage.local.set({lastPageMarkdown:{url:page.url,title:page.title,downloadId:id,savedAt:new Date().toISOString()}});setStatus(`${t('mdDone')}: ${name}`)}catch(error){setStatus(`${t('mdError')}: ${error?.message||error}`)}finally{button.disabled=false}});
+$('#captureChat').addEventListener('click',async()=>{if(!activeTab?.id||!activeProvider)return;const button=$('#captureChat');button.disabled=true;try{const provider=PROVIDERS[activeProvider],match=provider.matches.find(pattern=>activeTab.url.startsWith(pattern.replace(/\*$/,'')));if(!match)throw Error('Unsupported URL');if(!await chrome.permissions.request({origins:[match]}))throw Error(t('capturePermission'));const saved=await chrome.runtime.sendMessage({type:'SETTINGS',patch:{capture:{...(settings.capture||{}),[activeProvider]:true}}});if(!saved?.ok)throw Error(saved?.error||'Could not enable capture');settings={...settings,...saved.data};const scripts=await chrome.runtime.sendMessage({type:'SYNC_CAPTURE'});if(!scripts?.ok)throw Error(scripts?.error||'Could not register capture');const result=await chrome.runtime.sendMessage({type:'CAPTURE_OPEN_TABS'});if(!result?.ok)throw Error(result?.error||'Could not check capture');const tab=result.data?.tabs?.find(x=>x.platform===activeProvider);setStatus(t('captureDone')+(tab?' '+t('captureStatus')+tab.status:''))}catch(error){setStatus(String(error?.message||error))}finally{button.disabled=false}});

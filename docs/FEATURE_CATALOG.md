@@ -2,17 +2,19 @@
 
 Use statuses literally: **Implemented** means source/UI exists, not verified on every live site; **Planned** means not yet shipped. Tests and release notes must not claim browser end-to-end verification without evidence.
 
-## Implemented capability catalog (v0.1.8)
+## Implemented capability catalog (v0.1.10)
 
 | Domain | Feature | Status and caveat |
 |---|---|---|
 | Workspace | New-tab replacement with dashboard, navigation, statistics and global search | Implemented |
 | Interface | English/Persian RTL language switch, Light/Dark/System theme | Implemented |
+| Interface | Branded toolbar popup with contextual page, theme and language support | Implemented; SkyVision colors are a proposed reference, not approved trademark assets |
 | Open tabs | Browse/focus/close/bookmark tabs, domain grouping, detect duplicates | Implemented; closing requires approval |
 | Open tabs | Classify tabs into default/custom categories with editable names/colors | Implemented; tab assignment stored locally |
 | Open tabs | Sort visually by category, domain, title, recent activity or browser order | Implemented |
 | Open tabs | Move/order and group actual Chrome tabs with optional auto-organize | Implemented; pinned and protected tabs preserved |
 | Saved tabs | Save one web tab into a named category | Implemented in v0.1.8 |
+| Saved tabs | Save active web tab from toolbar popup into Repo, Agents, AI LLM or a custom dashboard category | Implemented in v0.1.10; uses Chrome bookmark storage |
 | Saved tabs | Save all web tabs as a named collection or save by category | Implemented in v0.1.8 |
 | Saved tabs | Custom bookmark categories, rename, move, filter, search, sort | Implemented in v0.1.8 |
 | Saved tabs | Restore a saved link or multi-tab collection | Implemented in v0.1.8; explicit action |
@@ -21,6 +23,8 @@ Use statuses literally: **Implemented** means source/UI exists, not verified on 
 | AI archive | Opt-in DOM-based ChatGPT/Claude/Gemini/Perplexity/Grok capture | Implemented; real sites can change DOM |
 | AI archive | Incremental long-chat update, stream edit handling, loss-averse merge | Implemented; missing virtualized DOM requires anchors |
 | AI archive | IndexedDB local archive; chat view and Markdown export | Implemented, content stays local |
+| Export | Save current page content, headings and links as Markdown with configurable `{title}`, `{domain}`, `{date}` filename | Implemented in v0.1.10; best-effort page extraction |
+| Export | Ask for a destination or save under a configured Downloads subfolder | Implemented in v0.1.10; optional Downloads permission required |
 | Export | Automatic Markdown to Downloads, selected folder when dashboard open | Implemented; browser permission required |
 | Portability | JSON backup/import for chat transcripts and clips | Implemented, manual; not cloud chat sync |
 | Quick save | Capture selected text or links from browser context menu | Implemented |
@@ -28,6 +32,8 @@ Use statuses literally: **Implemented** means source/UI exists, not verified on 
 | Local agent | Optional local Laya decision suggestions | Implemented integration; requires external local process |
 | Security | Per-site capture permission, opt-in host permissions, no server upload | Implemented intent; ongoing audit required |
 | Quality | Node tests and GitHub Actions extension checks/package | Implemented; no complete live-provider E2E suite |
+
+The toolbar popup and page-Markdown behavior are described in `docs/UPDATES_AND_PAGE_EXPORT.md`. The product preview is a concept illustration, not evidence of live Chrome validation.
 
 ## Prioritized proposed features (not implemented)
 

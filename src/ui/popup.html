@@ -4,23 +4,28 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="light dark">
-<meta name="theme-color" content="#f7f8fa">
+<meta name="theme-color" content="#fbf7f1">
 <title>Veyra</title>
 <style>
-:root{color-scheme:light;--bg:#f7f8fa;--surface:#fff;--ink:#1d2430;--muted:#667284;--border:#e6eaf3;--accent:#536bf3;--text-on-accent:white}
-:root[data-theme="dark"]{color-scheme:dark;--bg:#11161d;--surface:#1b222d;--ink:#f1f4fb;--muted:#b6c0cf;--border:#2d3541;--accent:#92a2ff;--text-on-accent:#11161d}
-@media(prefers-color-scheme:dark){:root:not([data-theme]){color-scheme:dark;--bg:#11161d;--surface:#1b222d;--ink:#f1f4fb;--muted:#b6c0cf;--border:#2d3541;--accent:#92a2ff;--text-on-accent:#11161d}}
-*{box-sizing:border-box}body{min-width:252px;margin:0;padding:20px;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Tahoma,sans-serif;background:var(--bg);color:var(--ink)}
-h2{margin:0;font-size:23px;letter-spacing:-1px}p{color:var(--muted);font-size:12px;line-height:1.65;margin:9px 0 19px}button{display:block;width:100%;padding:12px;border:1px solid var(--accent);border-radius:10px;margin-top:9px;background:var(--accent);color:var(--text-on-accent);font-size:12px;font-weight:700;cursor:pointer}button.secondary{background:var(--surface);color:var(--ink);border-color:var(--border)}button:hover{filter:brightness(1.05)}button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
-#status{font-size:11px;color:var(--muted);margin-top:10px;min-height:14px}
+:root{color-scheme:light;--bg:#fbf7f1;--surface:#fff;--subtle:#f2ece4;--ink:#1f2d3a;--muted:#586472;--line:#dcd6cc;--accent:#a27445;--accent-ink:#fff;--focus:#95622f;--shadow:0 12px 32px #1f2d3a0b}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#0b1828;--surface:#14283a;--subtle:#1a3346;--ink:#f7e9d8;--muted:#bac7d1;--line:#385162;--accent:#d8b383;--accent-ink:#0b1828;--focus:#e6c99b;--shadow:none}
+@media(prefers-color-scheme:dark){:root:not([data-theme]){color-scheme:dark;--bg:#0b1828;--surface:#14283a;--subtle:#1a3346;--ink:#f7e9d8;--muted:#bac7d1;--line:#385162;--accent:#d8b383;--accent-ink:#0b1828;--focus:#e6c99b;--shadow:none}}
+*{box-sizing:border-box}body{width:360px;min-height:420px;margin:0;padding:18px;background:var(--bg);color:var(--ink);font:13px/1.5 Inter,"Segoe UI",Tahoma,sans-serif}button,input,select{font:inherit;color:inherit}button{cursor:pointer}button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid var(--focus);outline-offset:2px}header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}.brand{display:flex;align-items:center;gap:10px}.mark{width:34px;height:34px;display:grid;place-items:center;border-radius:10px;background:var(--ink);color:var(--bg);font:18px Georgia,serif}.brand-name{font-size:17px;font-weight:650;letter-spacing:-.3px}.byline{font-size:10px;color:var(--muted);margin-top:1px}.icon-button{width:34px;height:34px;border:1px solid var(--line);border-radius:9px;background:var(--surface);font-size:16px}.page{padding:13px 14px;background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);margin-bottom:13px;min-width:0}.page-title{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.page-domain{font-size:11px;color:var(--muted);margin-top:2px;direction:ltr;text-align:start;overflow:hidden;text-overflow:ellipsis}.section-label{font-size:11px;font-weight:650;color:var(--muted);margin:0 0 7px}.row{display:grid;grid-template-columns:minmax(0,1fr) 125px;gap:9px;align-items:end}.field{display:grid;gap:5px;min-width:0}.field label{font-size:11px;color:var(--muted)}select,input{width:100%;height:36px;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:var(--bg);min-width:0}.button{width:100%;min-height:38px;padding:8px 11px;border-radius:8px;border:1px solid var(--ink);background:var(--ink);color:var(--bg);font-weight:600}.button:hover{filter:brightness(1.12)}.button.secondary{background:var(--surface);color:var(--ink);border-color:var(--line);font-weight:500}.button:disabled{opacity:.55;cursor:wait}.save-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.full{margin-top:8px}.capture[hidden]{display:none}details{border-top:1px solid var(--line);padding-top:10px;margin-top:12px}summary{cursor:pointer;font-weight:600;font-size:12px;list-style:none;display:flex;justify-content:space-between;align-items:center}summary::-webkit-details-marker{display:none}summary:after{content:"＋";color:var(--muted);font-size:15px}details[open] summary:after{content:"−"}.settings{display:grid;gap:10px;padding-top:11px}.hint{font-size:10px;color:var(--muted);line-height:1.5}.preview{padding:8px 9px;border-radius:7px;background:var(--subtle);font:11px/1.4 ui-monospace,SFMono-Regular,Consolas,monospace;overflow-wrap:anywhere;direction:ltr;text-align:left}.radio-row{display:flex;gap:12px;flex-wrap:wrap}.radio-row label{display:flex;align-items:center;gap:6px;color:var(--ink);font-size:11px}.radio-row input{width:14px;height:14px;accent-color:var(--accent)}#status{min-height:17px;padding:5px 2px 0;font-size:11px;color:var(--muted)}footer{text-align:center;font-size:10px;color:var(--muted);padding-top:4px}@media(prefers-reduced-motion:reduce){*,*:before,*:after{transition:none!important;animation:none!important}}
 </style>
 <script type="module" src="popup.js"></script>
-</head><body>
-<h2>veyra.</h2>
-<p id="caption">A calmer place for everything in your browser.</p>
-<button id="open"><span id="openLabel">Open workspace</span></button>
-<button class="secondary" id="captureChat" hidden><span id="captureChatLabel">Start saving this AI chat</span></button>
-<button class="secondary" id="save"><span id="saveLabel">Bookmark current tab</span></button>
-<button class="secondary" id="themeToggle" aria-label="Switch to dark mode"><span id="themeLabel">Dark mode</span></button>
+</head>
+<body>
+<header><div class="brand"><div class="mark" aria-hidden="true">◒</div><div><div class="brand-name">Veyra</div><div class="byline">By Hades. From SkyVision</div></div></div><button class="icon-button" id="themeToggle" aria-label="Switch theme" title="Switch theme">◐</button></header>
+<section class="page" aria-label="Active page"><div class="page-title" id="pageTitle">Current page</div><div class="page-domain" id="pageDomain"></div></section>
+<section aria-label="Save current tab"><div class="section-label" id="saveHeading">Save this tab</div><div class="row"><div class="field"><label id="categoryLabel" for="category">Category</label><select id="category"></select></div><button class="button" id="saveTab">Save tab</button></div></section>
+<div class="save-grid"><button class="button secondary" id="open"><span id="openLabel">Open workspace</span></button><button class="button secondary" id="saveMarkdown">Save page as .md</button></div>
+<button class="button secondary full capture" id="captureChat" hidden><span id="captureChatLabel">Start saving this AI chat</span></button>
+<details id="markdownSettings"><summary id="settingsHeading">Markdown file settings</summary><div class="settings">
+ <div class="field"><label id="filenameLabel" for="filename">File name pattern</label><input id="filename" maxlength="120" autocomplete="off" spellcheck="false"><div class="hint" id="filenameHint">Use {title}, {domain} or {date}. The .md extension is added.</div><div class="preview" id="filenamePreview"></div></div>
+ <fieldset style="border:0;padding:0;margin:0"><legend class="section-label" id="destinationLabel">Save location</legend><div class="radio-row"><label><input type="radio" name="destination" value="ask"><span id="askLabel">Ask each time</span></label><label><input type="radio" name="destination" value="downloads"><span id="downloadsLabel">Downloads folder</span></label></div></fieldset>
+ <div class="field" id="folderField"><label id="folderLabel" for="folder">Downloads subfolder</label><input id="folder" maxlength="150" autocomplete="off" spellcheck="false"><div class="hint" id="folderHint">Use folder names separated by /</div></div>
+ <button class="button secondary" id="saveSettings">Save Markdown settings</button>
+ </div></details>
 <div id="status" role="status" aria-live="polite"></div>
+<footer>Quietly organize what matters.</footer>
 </body></html>

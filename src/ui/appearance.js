@@ -13,6 +13,6 @@ export function applyTheme(mode, { doc = document, systemDark = false } = {}) {
   doc.documentElement.dataset.theme = effective;
   doc.documentElement.style.colorScheme = effective;
   if (doc.body) doc.body.dataset.theme = choice;
-  doc.querySelector('meta[name="theme-color"]')?.setAttribute('content', effective === 'dark' ? '#11161d' : '#f7f8fa');
+  doc.querySelector('meta[name="theme-color"]')?.setAttribute('content', effective === 'dark' ? '#0b1828' : '#fbf7f1');
   return effective;
 }

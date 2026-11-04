@@ -1,5 +1,13 @@
 # Third-party acknowledgements
 
+## Unslop design guidance
+
+The visual redesign in `src/ui/style.css` was informed by **unslop** by Damir Sokolovsky ([@heydamir](https://x.com/heydamir)), <https://github.com/heydamir/unslop>. The repository is licensed under CC BY 4.0. Veyra uses its design guidance and token references; it does not bundle the unslop skill or its scripts.
+
+## Sky Vision brand reference
+
+The popup palette and semantic light/dark tokens were informed by the proposed, unapproved Sky Vision design system by iAlirezaaa: <https://github.com/iAlirezaaa/skyvision-brand-system>. That repository states its license is unspecified and grants no open-source reuse permission. Veyra uses its published token values as design reference only; no Sky Vision artwork, logo asset, or source files are copied or bundled. The popup credits the reference as requested by the Veyra project owner.
+
 Veyra uses **adapted portions** of these two upstream MIT-licensed projects. The source repositories have **not** been cloned or forked into Veyra as a complete Git history. Their conceptual references, original notices and copyable adapted portions are documented here.
 
 ## Tab Out
@@ -27,3 +35,6 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 ## Laya
 
 https://github.com/NandhaKishorM/laya is an **optional external dependency**, reached through localhost. No Laya model, code, weights or runtime are distributed in Veyra.
+# UI design guidance
+
+The visual redesign in `src/ui/style.css` was informed by **unslop** by Damir Sokolovsky ([@heydamir](https://x.com/heydamir)), <https://github.com/heydamir/unslop>. The repository is licensed under CC BY 4.0. This project uses its design guidance and token references; it does not bundle the unslop skill or its scripts.

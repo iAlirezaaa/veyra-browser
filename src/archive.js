@@ -36,6 +36,12 @@ export function cleanDownloadsFolder(raw) {
   if (pieces.some(x=>!x || x==='.' || x==='..' || x.startsWith('.') || !/^[\p{L}\p{N} _-]{1,42}$/u.test(x))) return '';
   return pieces.join('/');
 }
+export function pageMarkdownName(title,url,pattern='{title}') {
+  let domain='page';try{domain=new URL(url).hostname.replace(/^www\./,'')||domain}catch{}
+  const date=new Date().toISOString().slice(0,10);
+  const base=String(pattern||'{title}').replace(/\{(title|domain|date)\}/gi,(_,key)=>({title:title||domain,domain,date}[key.toLowerCase()]));
+  return `${safeFilename(base).replace(/-+/g,'-').slice(0,76)||'web-page'}.md`;
+}
 export function downloadFilename(chat, root = 'Veyra/AI-Chats') {
   const valid=cleanDownloadsFolder(root);
   const site=providerFromUrl(chat.url);

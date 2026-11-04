@@ -29,6 +29,8 @@ test('pinned duplicate is not suggested for removal',()=>{
 test('categories providers and multilingual filenames',()=>{
   assert.equal(categoryFor({url:'https://chatgpt.com/c/abc'}),'ai');
   assert.equal(providerFromUrl('https://claude.ai/chat/abc'),'claude');
+  assert.equal(providerFromUrl('https://chat.deepseek.com/a/chat/s123'),'deepseek');
+  assert.equal(providerFromUrl('https://app.higgsfield.ai/create'),'higgsfield');
   assert.equal(hostOf('https://www.github.com/u'),'github.com');
   assert.equal(safeFilename('گفتگوی مهم ✨'),'گفتگوی-مهم');
 });

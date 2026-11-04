@@ -2,24 +2,33 @@ import { buildSuggestions, isWebTab, normalizeUrl, hostOf, PROVIDERS, providerFr
 import { dbAll, dbGet, dbPut, dbDelete } from './db.js';
 import { layaKeepSuggestion } from './laya.js';
 import { updateBadge } from './vendor/tabout-badge.js';
-import { archiveId, isConversationUrl, chatArchiveName, cleanDownloadsFolder, downloadFilename } from './archive.js';
-import { toMarkdown } from './core.js';
+import { archiveId, isConversationUrl, chatArchiveName, cleanDownloadsFolder, downloadFilename, pageMarkdownName } from './archive.js';
+import { toMarkdown, safeFilename } from './core.js';
 import {sanitizeCategories, DEFAULT_CATEGORIES, TAB_SORTS, assignUrlCategory, tabCategory} from './tab-workspace.js';
 import {organizeChromeTabs} from './tab-organizer.js';
 import {isTrustedDashboardSender} from './message-auth.js';
 import {mergeCapturedMessages,normalizeMessages,MAX_CHAT_MESSAGES,MAX_CHAT_CHARS} from './chat-sync.js';
 import {markdownParts} from './archive.js';
 
-const DEFAULTS={language:'en',theme:'system',capture:{},layaEnabled:false,autoReview:true,rtlSites:{},dismissed:{},activity:{},exportMode:'local',downloadsFolder:'Veyra/AI-Chats',tabCategories:DEFAULT_CATEGORIES,tabAssignments:{},tabSort:'category',autoOrganizeTabs:false};
+const DEFAULTS={language:'en',theme:'system',capture:{},layaEnabled:false,autoReview:true,rtlSites:{},dismissed:{},activity:{},exportMode:'local',downloadsFolder:'Veyra/AI-Chats',pageMarkdownFilename:'{title}',pageMarkdownMode:'ask',pageMarkdownFolder:'Veyra/Web-Pages',tabCategories:DEFAULT_CATEGORIES,tabAssignments:{},tabSort:'category',autoOrganizeTabs:false};
 const EXPORT_ALARM='veyra-export';
 const HEALTH_STATES=new Set(['waiting-url','no-messages','saved','skipped','error','active']);
 const saveQueues=new Map();
 const CAPTURE_SCRIPT_PREFIX='veyra-capture-';
+const PAGE_MARKDOWN_MENU='veyra-page-markdown';
+const AI_TASK_ALARM='veyra-ai-task-check';
+const AI_TASK_SELECTORS='button[aria-label*="Stop" i],button[aria-label*="Cancel" i],[data-testid*="stop" i],[data-testid*="cancel" i],button[title*="Stop" i]';
+const UPDATE_ALARM='veyra-update-check';
+const UPDATE_URL='https://api.github.com/repos/iAlirezaaa/veyra-browser/releases/latest';
 const getSettings=async()=>({ ...DEFAULTS,...(await chrome.storage.local.get('settings')).settings });
 async function patchSettings(patch) {
   const old=await getSettings();
+  if(Object.hasOwn(patch,'notificationWebhook'))patch={...patch,notificationWebhook:validWebhook(patch.notificationWebhook)};
   if(patch.exportMode && !['local','downloads','folder'].includes(patch.exportMode))throw new Error('Invalid export mode');
   if(patch.downloadsFolder && !cleanDownloadsFolder(patch.downloadsFolder))throw new Error('Invalid Downloads folder');
+  if(Object.hasOwn(patch,'pageMarkdownFilename'))patch={...patch,pageMarkdownFilename:String(patch.pageMarkdownFilename).slice(0,120)};
+  if(patch.pageMarkdownMode && !['ask','downloads'].includes(patch.pageMarkdownMode))throw new Error('Invalid page Markdown save mode');
+  if(Object.hasOwn(patch,'pageMarkdownFolder') && !cleanDownloadsFolder(patch.pageMarkdownFolder))throw new Error('Invalid page Markdown folder');
   if(patch.exportMode==='downloads' && !await chrome.permissions.contains({permissions:['downloads']}))throw new Error('Downloads permission required');
   const next={...old,...patch};
   await chrome.storage.local.set({settings:next});
@@ -154,6 +163,95 @@ function markdownDataUrl(content){
   // Chrome's downloads API can write a data URL to a relative Downloads path.
   return 'data:text/markdown;charset=utf-8;base64,'+btoa(unescape(encodeURIComponent(content)));
 }
+function pageToMarkdown(){
+  const clean = value => String(value || '').replace(/\u00a0/g,' ').replace(/[ \t]+\n/g,'\n').replace(/\n{3,}/g,'\n\n').trim();
+  const title = clean(document.title) || location.hostname || 'Web page';
+  const description = document.querySelector('meta[name="description"]')?.content || '';
+  const canonical = document.querySelector('link[rel="canonical"]')?.href || location.href;
+  const headings = [...document.querySelectorAll('h1,h2,h3,h4,h5,h6')]
+    .map(node => `${'#'.repeat(Number(node.tagName.slice(1)))} ${clean(node.innerText)}`)
+    .filter(Boolean);
+  const links = [...document.querySelectorAll('a[href]')]
+    .map(a => ({text:clean(a.innerText), href:a.href}))
+    .filter(x => x.text && /^https?:/i.test(x.href))
+    .slice(0,1000);
+  const root = document.querySelector('main, article, [role="main"]') || document.body;
+  const text = clean(root?.innerText || document.body?.innerText || '').slice(0,1000000);
+  const lines = [`# ${title}`,'',`Source: ${canonical}`,`Captured: ${new Date().toISOString()}`];
+  if(description) lines.push(`Description: ${clean(description)}`);
+  lines.push('', '## Page text', '', text || '_No readable text found._');
+  if(headings.length) lines.push('', '## Headings', '', headings.join('\n\n'));
+  if(links.length) lines.push('', '## Links', '', ...links.map(x => `- [${x.text}](${x.href})`));
+  return lines.join('\n').replace(/\n{3,}/g,'\n\n')+'\n';
+}
+async function saveCurrentPageMarkdown(tab){
+  if(!tab?.id || !isWebTab(tab)) throw new Error('This action is available on web pages only');
+  const result=await chrome.scripting.executeScript({target:{tabId:tab.id},func:pageToMarkdown});
+  const content=String(result?.[0]?.result||'');
+  if(!content) throw new Error('No readable page content found');
+  const settings=await getSettings(),name=pageMarkdownName(tab.title||new URL(tab.url).hostname,tab.url,settings.pageMarkdownFilename);
+  const folder=cleanDownloadsFolder(settings.pageMarkdownFolder)||'Veyra/Web-Pages';
+  const path=settings.pageMarkdownMode==='downloads'?`${folder}/${name}`:name;
+  const id=await chrome.downloads.download({url:markdownDataUrl(content),filename:path,saveAs:settings.pageMarkdownMode!=='downloads',conflictAction:'uniquify'});
+  await chrome.storage.local.set({lastPageMarkdown:{url:normalizeUrl(tab.url),title:tab.title||'',downloadId:id,savedAt:new Date().toISOString()}});
+  return {id,path};
+}
+async function enablePagePermission(tabId,origin){
+  const tab=await chrome.tabs.get(tabId);
+  if(!isWebTab(tab)||new URL(tab.url).origin!==origin)throw new Error('The active page changed; try again');
+  return chrome.permissions.request({origins:[`${origin}/*`]});
+}
+async function enableTaskWatch(tabId,origin){
+  const tab=await chrome.tabs.get(tabId);
+  if(!isWebTab(tab)||new URL(tab.url).origin!==origin)throw new Error('The active page changed; try again');
+  const permitted=await enablePagePermission(tabId,origin);
+  if(!permitted)throw new Error('Site access was not granted');
+  await chrome.scripting.executeScript({target:{tabId},func:(selectors)=>{
+    globalThis.__veyraTaskWatches ||= {};
+    if(globalThis.__veyraTaskWatches[location.origin])return;
+    globalThis.__veyraTaskWatches[location.origin]=true;
+    let generating=false,completedAt=0,debounce=null;
+    const check=()=>{
+      const active=Boolean(document.querySelector(selectors)) || [...document.querySelectorAll('[role="progressbar"],[aria-busy="true"]')].some(node=>node.getClientRects().length>0);
+      if(active){generating=true;return;}
+      if(generating && Date.now()-completedAt>25000){clearTimeout(debounce);debounce=setTimeout(()=>{if(!document.querySelector(selectors)){generating=false;completedAt=Date.now();chrome.runtime.sendMessage({type:'AI_TASK_FINISHED',title:document.title,url:location.href}).catch(()=>{});}},1800);}
+    };
+    const observer=new MutationObserver(check);observer.observe(document.documentElement,{subtree:true,childList:true,attributes:true});
+    setInterval(check,1800);check();
+  },args:[AI_TASK_SELECTORS]});
+  const settings=await getSettings();
+  const map={...(settings.aiTaskOrigins||{}),[origin]:true};
+  await patchSettings({aiTaskOrigins:map});
+  return {enabled:true,origin};
+}
+async function checkForUpdate(){
+  const settings=await getSettings();
+  if(settings.updateCheckEnabled===false)return {skipped:true};
+  try{
+    const response=await fetch(UPDATE_URL,{headers:{Accept:'application/vnd.github+json'},cache:'no-store'});
+    if(!response.ok)throw new Error(`GitHub returned ${response.status}`);
+    const release=await response.json();
+    const current=chrome.runtime.getManifest().version;
+    const latest=String(release.tag_name||'').replace(/^v/i,'');
+    const parse=v=>v.split('.').map(n=>Number.parseInt(n,10)||0);
+    const a=parse(latest),b=parse(current);
+    const available=a.some((n,i)=>n>(b[i]||0)&&a.slice(0,i).every((v,j)=>v===(b[j]||0)));
+    const record={current,latest,available:Boolean(latest&&available),url:String(release.html_url||'https://github.com/iAlirezaaa/veyra-browser/releases').slice(0,500),checkedAt:new Date().toISOString()};
+    await chrome.storage.local.set({updateStatus:record});return record;
+  }catch(error){const record={current:chrome.runtime.getManifest().version,error:String(error?.message||error).slice(0,180),checkedAt:new Date().toISOString()};await chrome.storage.local.set({updateStatus:record});return record;}
+}
+function validWebhook(raw){
+  if(!raw)return '';
+  let url;try{url=new URL(String(raw))}catch{throw new Error('Webhook must be a valid HTTPS URL')}
+  const localHttp=url.protocol==='http:'&&['localhost','127.0.0.1','::1'].includes(url.hostname);
+  if((url.protocol!=='https:'&&!localHttp)||url.username||url.password)throw new Error('Webhook must use HTTPS; local HTTP is allowed only for localhost');
+  return url.href.slice(0,1000);
+}
+async function deliverExternalNotification(payload){
+  const webhook=validWebhook((await getSettings()).notificationWebhook);if(!webhook)return {skipped:true};
+  const response=await fetch(webhook,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event:'veyra.ai_task.finished',version:1,title:String(payload.title||'AI task finished').slice(0,180),origin:String(payload.origin||'').slice(0,300),url:String(payload.url||'').slice(0,1000),finishedAt:new Date().toISOString()})});
+  if(!response.ok)throw new Error(`Webhook returned ${response.status}`);return {delivered:true,status:response.status};
+}
 async function flushDownloads() {
   const settings=await getSettings();
   if(settings.exportMode!=='downloads' || !await chrome.permissions.contains({permissions:['downloads']}))return {skipped:true};
@@ -280,8 +378,21 @@ async function handle(message,sender) {
     case 'CAPTURE_HEALTH': return captureHealth(message,sender);
     case 'GET_REVIEW': return review();
     case 'SETTINGS': return patchSettings(message.patch||{});
+    case 'UPDATE_CHECK': return checkForUpdate();
+    case 'WEBHOOK_TEST': if(!isTrustedDashboardSender(sender,chrome.runtime))throw new Error('Open the Veyra dashboard first');{const url=validWebhook((await getSettings()).notificationWebhook);if(!url)throw new Error('Save a webhook URL first');const response=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({event:'veyra.test',version:1,title:'Veyra webhook test',origin:'chrome-extension://'+chrome.runtime.id,url:'',finishedAt:new Date().toISOString()})});if(!response.ok)throw new Error(`Webhook returned ${response.status}`);return {delivered:true,status:response.status};}
     case 'SYNC_CAPTURE': return {ids:await syncCaptureScripts()};
     case 'CAPTURE_OPEN_TABS': return captureOpenTabs();
+    case 'ENABLE_AI_TASK_WATCH': if(!isTrustedDashboardSender(sender,chrome.runtime))throw new Error('Open the Veyra dashboard first');if(!await chrome.permissions.request({permissions:['notifications']}))throw new Error('Notifications permission was not granted');return enableTaskWatch(Number(message.tabId),String(message.origin||''));
+    case 'REQUEST_PAGE_ACCESS': if(!isTrustedDashboardSender(sender,chrome.runtime))throw new Error('Open the Veyra dashboard first');return {granted:await enablePagePermission(Number(message.tabId),String(message.origin||''))};
+    case 'AI_TASK_FINISHED': {
+      const origin=(()=>{try{return new URL(sender?.tab?.url||'').origin}catch{return ''}})();
+      const settings=await getSettings();
+      if(!origin||!settings.aiTaskOrigins?.[origin]||!sender?.tab?.id)throw new Error('AI task notifications are not enabled for this origin');
+      const result={local:false,external:false};
+      await chrome.notifications.create(`veyra-task-${sender.tab.id}-${Date.now()}`,{type:'basic',iconUrl:chrome.runtime.getURL('assets/icon128.png'),title:'AI task finished',message:String(message.title||new URL(origin).hostname).slice(0,180),contextMessage:origin});result.local=true;
+      try{result.external=(await deliverExternalNotification({title:message.title,origin,url:message.url})).delivered===true;}catch(error){await chrome.storage.local.set({notificationWebhookStatus:{error:String(error.message||error).slice(0,180),at:new Date().toISOString()}});}
+      return {notified:result.local||result.external,...result};
+    }
     case 'GET_EXPORT_QUEUE': {
       const [chats,receipts]=await Promise.all([dbAll('chats'),dbAll('receipts')]);
       const map=new Map(receipts.filter(x=>x.id.startsWith('folder:')).map(x=>[x.id,x]));
@@ -334,13 +445,21 @@ chrome.runtime.onInstalled.addListener(async()=>{
   await chrome.contextMenus.removeAll();
   chrome.contextMenus.create({id:'veyra-clip',title:'Save selection to Veyra',contexts:['selection']});
   chrome.contextMenus.create({id:'veyra-link',title:'Save link to Veyra',contexts:['link']});
+  chrome.contextMenus.create({id:PAGE_MARKDOWN_MENU,title:'Save page as Markdown (.md)',contexts:['page']});
   await syncCaptureScripts(); await scheduleExport(); await updateBadge();
+  await chrome.alarms.create(UPDATE_ALARM,{when:Date.now()+15000,periodInMinutes:360});checkForUpdate().catch(()=>{});
 });
-chrome.runtime.onStartup.addListener(()=>{chrome.alarms.create('veyra-review',{periodInMinutes:10});syncCaptureScripts().catch(error=>console.warn('[Veyra] Capture registration:',error));scheduleExport().catch(()=>{});updateBadge();});
+chrome.runtime.onStartup.addListener(()=>{chrome.alarms.create('veyra-review',{periodInMinutes:10});chrome.alarms.create(UPDATE_ALARM,{when:Date.now()+10000,periodInMinutes:360});checkForUpdate().catch(()=>{});syncCaptureScripts().catch(error=>console.warn('[Veyra] Capture registration:',error));scheduleExport().catch(()=>{});updateBadge();});
 chrome.permissions.onRemoved.addListener(removed=>{if(removed.origins?.length)syncCaptureScripts().catch(error=>console.warn('[Veyra] Permission changed:',error));});
 chrome.alarms.onAlarm.addListener(a=>{if(a.name==='veyra-tab-auto')getSettings().then(s=>s.autoOrganizeTabs?organizeChromeTabs(chrome,s,{mode:'both'}):null).then(r=>r&&chrome.storage.local.set({tabOrganizationReport:{...r,at:new Date().toISOString(),mode:'auto'}})).catch(error=>console.warn('[Veyra] Tab organization:',error));if(a.name==='veyra-review') review().catch(()=>{});if(a.name===EXPORT_ALARM)flushDownloads().catch(error=>chrome.storage.local.set({exportStatus:{error:String(error.message||error),updatedAt:new Date().toISOString()}}));});
+chrome.alarms.onAlarm.addListener(a=>{if(a.name===UPDATE_ALARM)checkForUpdate().catch(()=>{});});
 chrome.downloads?.onChanged?.addListener(async delta=>{if(!delta.state?.current)return;try {const entries=await dbAll('receipts');for(const entry of entries){if(entry.downloadId!==delta.id || entry.status!=='pending')continue;await dbPut('receipts',{...entry,status:delta.state.current==='complete'?'complete':'interrupted'});}}catch(error){console.warn('[Veyra] Download completion tracking:',error);}});
 chrome.contextMenus.onClicked.addListener(async(info,tab)=>{
+  if(info.menuItemId===PAGE_MARKDOWN_MENU){
+    try { await saveCurrentPageMarkdown(tab); }
+    catch(error){ await chrome.storage.local.set({lastPageMarkdownError:{error:String(error?.message||error),at:new Date().toISOString()}}); }
+    return;
+  }
   const text=info.menuItemId==='veyra-clip'?info.selectionText:info.linkUrl;
   if(!text) return;
   await dbPut('clips',{id:crypto.randomUUID(),title:String(tab?.title||'Saved item').slice(0,250),url:normalizeUrl(tab?.url)||'',text:String(text).slice(0,16000),savedAt:new Date().toISOString()});

@@ -1,6 +1,10 @@
 # Veyra — Your browser, in order.
 
-**Veyra** is a local-first, bilingual (English/Persian) Chrome Manifest V3 browser workspace. It replaces the **New Tab** page with a restrained, Apple-inspired dashboard for managing tabs, bookmarks, saved snippets, and explicitly enabled AI chat archives. Laya can optionally provide suggestions through a localhost decision endpoint.
+**Veyra** is a local-first, bilingual (English/Persian) Chromium Manifest V3 workspace. Its New Tab dashboard organizes tabs, bookmarks, saved links and explicitly enabled AI chat archives; the redesigned toolbar popup provides categorized quick-save and configurable full-page Markdown export, using a restrained SkyVision-inspired palette.
+
+![Veyra product preview](assets/product-preview.png)
+
+*Product concept based on the current interface. Example content is illustrative; this is not a live-browser test screenshot.*
 
 > Status: **working MVP source, not Chrome Web Store published or browser-tested**. Run tests and manually verify on Chrome before treating the capture adapters or Laya integration as reliable. This repository uses small adapted MIT-licensed parts from [Tab Out](https://github.com/zarazhangrui/tab-out) and [LTF Builder](https://github.com/localthink-org/localthink-builder); see [third-party notices](THIRD_PARTY_NOTICES.md). It is not an official fork of either project.
 
@@ -8,7 +12,7 @@
 
 ## Quick install (Chrome/Edge/Brave)
 
-1. Download or unzip `veyra-chrome-extension.zip` (or use this repository's root).
+1. Download or unzip [`veyra-v0.1.10-chrome.zip`](dist/veyra-v0.1.10-chrome.zip) (or use this repository's root for development).
 2. Open `chrome://extensions` and turn on **Developer mode**.
 3. Select **Load unpacked**, then select the folder containing `manifest.json`.
 4. Open a **new tab**. The Veyra dashboard replaces Chrome's new-tab page.
@@ -23,11 +27,15 @@ Chrome extensions may replace `chrome://newtab` but **cannot silently take over 
 - **AI conversations:** opt-in capture per site for ChatGPT, Claude, Gemini, Perplexity, and Grok. Current DOM extraction is **best effort**, and virtualized/changed sites may not yield complete transcripts. Capture starts only after explicit host permission. More robust export engines can be incorporated later.
 - **Local archive:** AI chats and selected text/link clips saved in IndexedDB. Conversation Markdown downloads and portable JSON backup/import.
 - **Bookmarks:** read and search existing Chrome bookmarks, save open tabs with a click.
+- **Popup quick-save:** save the active web tab into Repo, Agents, AI LLM, or another saved category shared with the dashboard.
+- **Full-page Markdown:** configure a `{title}`, `{domain}`, `{date}` filename pattern, ask for a destination on each save, or use a chosen subfolder under Downloads. Popup and context-menu exports share these preferences; Downloads permission is optional and requested only when needed.
+- **AI completion notifications:** detect completion on supported AI interfaces and optionally deliver an event to a user-configured HTTPS webhook. Detection depends on page UI signals and may vary by provider.
+- **Update check:** check the public GitHub Release version at startup and periodically. It reports availability but does not install code automatically; unpacked extensions must be reloaded by the user.
 - **RTL tools:** enable right-to-left editing fields for a specific site with permission; also includes full RTL Persian interface.
 - **Optional history:** history is *not* requested at installation. A separate button requests permission before reading recent visits.
 - **Optional local Laya:** calls `http://127.0.0.1:8000/predict` only after explicit opt-in, and sends **only a tab title, domain and suggestion type** to the user's own local server. If Laya is absent, basic deterministic suggestions still work. Model output never triggers deletion.
 - **Background review:** an MV3 alarm reevaluates tab suggestions roughly every 10 minutes while the browser is active. MV3 background workers are not truly always running.
-- **No backend, no login, no telemetry.**
+- **No Veyra account, hosted backend, or analytics.** Data stays local unless you explicitly enable Laya on localhost or configure the external completion webhook; the webhook sends task metadata, not prompts or responses.
 
 ## Development
 
@@ -52,9 +60,17 @@ Chrome's permissions are visible in `manifest.json`. Site access and history are
 
 See [`docs/ROADMAP.md`](docs/ROADMAP.md) for structured plans around a full library, bidirectional connectors, stronger chat extraction, local semantic indexing and advanced Laya decisions.
 
+See [`docs/UPDATES_AND_PAGE_EXPORT.md`](docs/UPDATES_AND_PAGE_EXPORT.md) for the exact export, update-check and webhook behavior and limitations.
+
 ## License
 
 MIT, with retained notices for the adapted components. [LICENSE](LICENSE), [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+## v0.1.10 — Popup quick-save and page Markdown export
+
+The toolbar popup now saves the active tab into the Veyra Saved Tabs category chosen in the popup and offers a full-page Markdown export. Configure the filename with `{title}`, `{domain}` and `{date}`, then choose a save dialog or a Downloads subfolder. The popup follows the proposed SkyVision palette and supports the extension's English/Persian and theme preferences. This release also contains AI task-finished notifications, optional HTTPS webhook delivery and a GitHub release version check; the version check does not install extension code.
+
+[Install v0.1.10](dist/veyra-v0.1.10-chrome.zip) · [SHA-256](dist/SHA256SUMS.txt) · [Feature details](docs/UPDATES_AND_PAGE_EXPORT.md)
 
 ## v0.1.2 — Automatic AI capture and storage destination
 

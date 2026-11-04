@@ -66,9 +66,21 @@ export const PROVIDERS = {
   claude: {name:'Claude',matches:['https://claude.ai/*']},
   gemini: {name:'Gemini',matches:['https://gemini.google.com/*']},
   perplexity: {name:'Perplexity',matches:['https://www.perplexity.ai/*']},
-  grok: {name:'Grok',matches:['https://grok.com/*']}
+  grok: {name:'Grok',matches:['https://grok.com/*']},
+  deepseek: {name:'DeepSeek',matches:['https://chat.deepseek.com/*']},
+  qwen: {name:'Qwen',matches:['https://chat.qwen.ai/*']},
+  kimi: {name:'Kimi',matches:['https://www.kimi.com/*','https://kimi.moonshot.cn/*']},
+  yuanbao: {name:'Tencent Yuanbao',matches:['https://yuanbao.tencent.com/*']},
+  cohere: {name:'Cohere',matches:['https://coral.cohere.com/*']},
+  mistral: {name:'Mistral Le Chat',matches:['https://chat.mistral.ai/*']},
+  huggingchat: {name:'HuggingChat',matches:['https://huggingface.co/chat/*']},
+  poe: {name:'Poe',matches:['https://poe.com/*']},
+  you: {name:'You.com',matches:['https://you.com/*']},
+  character: {name:'Character.AI',matches:['https://character.ai/*']},
+  manuss: {name:'Manus',matches:['https://manus.im/*']},
+  higgsfield: {name:'Higgsfield',matches:['https://higgsfield.ai/*','https://app.higgsfield.ai/*']}
 };
 export function providerFromUrl(url) {
-  const h=hostOf(url);
-  return Object.keys(PROVIDERS).find(p=>({chatgpt:['chatgpt.com','chat.openai.com'],claude:['claude.ai'],gemini:['gemini.google.com'],perplexity:['www.perplexity.ai','perplexity.ai'],grok:['grok.com']}[p]||[]).includes(h))||null;
+  let h;try{h=new URL(url).hostname.toLowerCase().replace(/^www\./,'')}catch{return null}
+  return Object.keys(PROVIDERS).find(p=>({chatgpt:['chatgpt.com','chat.openai.com'],openai:['platform.openai.com'],claude:['claude.ai'],gemini:['gemini.google.com'],perplexity:['www.perplexity.ai','perplexity.ai'],grok:['grok.com'],deepseek:['chat.deepseek.com'],qwen:['chat.qwen.ai'],kimi:['www.kimi.com','kimi.moonshot.cn'],yuanbao:['yuanbao.tencent.com'],cohere:['coral.cohere.com'],mistral:['chat.mistral.ai'],huggingchat:['huggingface.co'],poe:['poe.com'],you:['you.com'],character:['character.ai'],manuss:['manus.im'],higgsfield:['higgsfield.ai','app.higgsfield.ai']}[p]||[]).includes(h))||null;
 }

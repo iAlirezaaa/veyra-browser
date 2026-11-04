@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {archiveId,isConversationUrl,chatArchiveName,cleanDownloadsFolder,downloadFilename} from '../src/archive.js';
+import {archiveId,isConversationUrl,chatArchiveName,cleanDownloadsFolder,downloadFilename,pageMarkdownName} from '../src/archive.js';
 
 test('only conversation routes are eligible; new unsaved landing pages are never mixed together',()=>{
   const ok=[
@@ -27,6 +27,11 @@ test('downloads paths cannot escape the Chrome Downloads root',()=>{
  for(const value of ['../secrets','C:\\Users\\bob','/tmp','..','Veyra/../trash','Veyra//archive','.secret','a/b/c/d/e'])assert.equal(cleanDownloadsFolder(value),'',value);
  assert.equal(cleanDownloadsFolder('Veyra/AI-Chats'),'Veyra/AI-Chats');
  assert.equal(cleanDownloadsFolder('ویرا/گفتگوها'),'ویرا/گفتگوها');
+});
+test('page Markdown filename templates substitute safe title, domain and date values',()=>{
+ const value=pageMarkdownName('Hello / World','https://www.example.com/docs','{domain} - {title} - {date}');
+ assert.match(value,/^examplecom-Hello-World-\d{4}-\d{2}-\d{2}\.md$/);
+ assert.equal(pageMarkdownName('Page','https://example.com',''), 'Page.md');
 });
 
 test('long Markdown exports split into numbered parts with all messages intact',async()=>{

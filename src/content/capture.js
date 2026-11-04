@@ -10,11 +10,24 @@
     : host === 'claude.ai' ? 'claude'
     : host === 'gemini.google.com' ? 'gemini'
     : host === 'www.perplexity.ai' || host === 'perplexity.ai' ? 'perplexity'
-    : host === 'grok.com' ? 'grok' : null;
+    : host === 'grok.com' ? 'grok'
+    : host === 'chat.deepseek.com' ? 'deepseek'
+    : host === 'chat.qwen.ai' ? 'qwen'
+    : host === 'www.kimi.com' || host === 'kimi.moonshot.cn' ? 'kimi'
+    : host === 'yuanbao.tencent.com' ? 'yuanbao'
+    : host === 'coral.cohere.com' ? 'cohere'
+    : host === 'chat.mistral.ai' ? 'mistral'
+    : host === 'huggingface.co' ? 'huggingchat'
+    : host === 'poe.com' ? 'poe'
+    : host === 'you.com' ? 'you'
+    : host === 'character.ai' ? 'character'
+    : host === 'manus.im' ? 'manuss'
+    : host === 'higgsfield.ai' || host === 'app.higgsfield.ai' ? 'higgsfield' : null;
   if (!platform) return;
 
   // Site HTML changes independently from Veyra. Keep role markers explicit:
   // do NOT scan every paragraph in the page as though it were a conversation.
+  const generic = ['[data-message-id]','[data-testid*="message" i]','[class*="message-content"]','[class*="messageContent"]'];
   const selectors = {
     chatgpt: [
       '[data-message-author-role]',
@@ -44,7 +57,10 @@
     grok: [
       '[data-testid="user-message"]', '[data-testid="assistant-message"]',
       '[data-role="user"]', '[data-role="assistant"]'
-    ]
+    ],
+    deepseek:generic,qwen:generic,kimi:generic,yuanbao:generic,cohere:generic,mistral:generic,
+    huggingchat:generic,poe:generic,you:generic,character:generic,manuss:generic,
+    higgsfield:['[data-testid*="generation" i]','[data-testid*="task" i]','[class*="generation" i]','[class*="task-status" i]']
   };
   selectors.chatgpt.push('article[data-testid^="conversation-turn"]');
   const selector = selectors[platform].join(', ');
@@ -63,13 +79,16 @@
     if (node.querySelector?.('[data-user-message-bubble="true"]') && !node.querySelector?.('[data-message-author-role="assistant"]'))return 'user';
     const testId = String(node.getAttribute('data-testid') || node.getAttribute('data-test-id') || '').toLowerCase();
     if (/(?:^|[-_])(user|human)(?:[-_]|$)|^query$/.test(testId)) return 'user';
-    if (/(?:^|[-_])(assistant|ai|answer)(?:[-_]|$)|^answer$/.test(testId)) return 'assistant';
+    if (/(?:^|[-_])(assistant|ai|answer|model)(?:[-_]|$)|^answer$/.test(testId)) return 'assistant';
+    if (/^(?:user|human)(?:[-_]|$)/.test(testId)) return 'user';
     const tag = String(node.tagName || '').toLowerCase();
     if (tag === 'user-query') return 'user';
     if (tag === 'model-response') return 'assistant';
     const classes = String(node.className?.baseVal || node.className || '').toLowerCase();
     if (/(^|\s)(font-user-message|user-turn|user-query|gemini-user-message)(\s|$)/.test(classes)) return 'user';
     if (/(^|\s)(font-claude-response|font-claude-message|agent-turn|model-response|gemini-response)(\s|$)/.test(classes)) return 'assistant';
+    if (/\b(?:user|human)[-_ ]?(?:message|turn|content)\b/i.test(classes)) return 'user';
+    if (/\b(?:assistant|ai|model)[-_ ]?(?:message|turn|content)\b/i.test(classes)) return 'assistant';
     // Some wrapper nodes carry the turn id, not its role. Only trust explicitly
     // marked descendants rather than guessing who authored a turn.
     const child = node.querySelector?.('[data-message-author-role], [data-content-search-unit-key$=":user"], [data-content-search-unit-key$=":assistant"], [data-user-message-bubble="true"]');
@@ -115,7 +134,13 @@
     claude: /\/chat\/[^/]+/i,
     gemini: /\/(?:u\/\d+\/)?app\/[^/]+/i,
     perplexity: /\/(?:search|thread)\/[^/]+/i,
-    grok: /\/chat\/[^/]+/i
+    grok: /\/chat\/[^/]+/i,
+    deepseek: /\/(?:a\/)?(?:chat|conversation)\//i, qwen: /\/(?:chat|conversation)\//i,
+    kimi: /\/(?:chat|conversation)\//i, yuanbao: /\/(?:chat|conversation)\//i,
+    cohere: /\/(?:chat|conversation)\//i, mistral: /\/(?:chat|conversation)\//i,
+    huggingchat: /\/chat(?:\/|$)/i, poe: /\/(?:chat|[A-Za-z0-9_-]+)\/?/i,
+    you: /\/(?:search|chat)\//i, character: /\/(?:chat|character)\//i,
+    manuss: /\//, higgsfield: /\//
   };
   const validRoute = () => { try { return conversationPaths[platform].test(new URL(location.href).pathname); } catch { return false; } };
 

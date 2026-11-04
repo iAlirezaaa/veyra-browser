@@ -11,6 +11,7 @@ test('Chrome MV3 override and files exist',()=>{
 });
 test('sensitive permissions stay optional',()=>{
  assert.equal(m.permissions.includes('history'),false);
+ assert.equal(m.permissions.includes('notifications'),true);
  assert.ok(m.optional_permissions.includes('history'));
  assert.equal(m.permissions.includes('cookies'),false);
  assert.equal(m.permissions.includes('webRequest'),false);

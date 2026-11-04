@@ -18,7 +18,7 @@ test('applyTheme synchronizes root, body, native color-scheme and meta',()=>{
  assert.equal(doc.documentElement.dataset.theme,'dark');
  assert.equal(doc.body.dataset.theme,'system');
  assert.equal(doc.documentElement.style.colorScheme,'dark');
- assert.equal(themeColor,'#11161d');
+ assert.equal(themeColor,'#0b1828');
  assert.equal(applyTheme('light',{doc,systemDark:true}),'light');
- assert.equal(themeColor,'#f7f8fa');
+ assert.equal(themeColor,'#fbf7f1');
 });

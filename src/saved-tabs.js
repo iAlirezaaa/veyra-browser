@@ -6,7 +6,7 @@
 export const ROOT_TITLE = 'Veyra — Saved Tabs';
 export const FALLBACK_CATEGORY = 'Unsorted';
 export const MAX_SESSION_TABS = 150;
-export const DEFAULT_SAVED_CATEGORIES = ['Work', 'Research', 'Personal', 'Read later', 'AI'];
+export const DEFAULT_SAVED_CATEGORIES = ['Repo', 'Agents', 'AI LLM', 'Research', 'Personal', 'Read later'];
 
 export function safeTitle(text, fallback='Untitled') {
   const value=String(text??'').replace(/[\u0000-\u001f\u007f]/g,' ').replace(/\s+/g,' ').trim().slice(0,90);

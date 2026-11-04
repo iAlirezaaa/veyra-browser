@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Veyra — Browser Workspace",
   "short_name": "Veyra",
-  "version": "0.1.8",
+  "version": "0.1.10",
   "description": "A calm, bilingual browser workspace for tabs, bookmarks, AI conversations and local decisions.",
   "permissions": [
     "tabs",
@@ -11,7 +11,9 @@
     "alarms",
     "scripting",
     "contextMenus",
-    "tabGroups"
+    "tabGroups",
+    "notifications",
+    "https://api.github.com/*"
   ],
   "optional_permissions": [
     "history",
