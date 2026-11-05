@@ -32,6 +32,8 @@ AI task completion -> optional local notification + optional HTTPS webhook (meta
 - Preference: `chrome.storage.local.settings`. Bounded observation of recent tab activity; no remote telemetry.
 - Update check: reads the public GitHub latest-release metadata on Chrome startup and every six hours; it does not execute downloaded code or silently install a ZIP. It sends no browser data to GitHub.
 - Notification webhook: optional HTTPS POST to the URL explicitly entered by the user. It contains event type, page title, site origin, task URL and completion time; chat prompt/response text is excluded.
+- Archive search: the trusted New Tab dashboard may request `SEARCH_CHATS` with a bounded query. The service worker searches local IndexedDB message text and returns at most 250 metadata rows with short excerpts; it does not contact a server.
+- Bookmark views: Chrome bookmark nodes are grouped by their existing folder path in the dashboard. Search and sort are presentation-only and never move or rewrite bookmark nodes.
 - Backup: `{format:'veyra-backup-v1',chats,clips,settings:{language,theme}}`.
 
 ## Boundaries and known risks

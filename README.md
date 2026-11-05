@@ -12,7 +12,7 @@
 
 ## Quick install (Chrome/Edge/Brave)
 
-1. Download or unzip [`veyra-v0.1.10-chrome.zip`](dist/veyra-v0.1.10-chrome.zip) (or use this repository's root for development).
+1. Download or unzip [`veyra-v0.1.11-chrome.zip`](dist/veyra-v0.1.11-chrome.zip) (or use this repository's root for development).
 2. Open `chrome://extensions` and turn on **Developer mode**.
 3. Select **Load unpacked**, then select the folder containing `manifest.json`.
 4. Open a **new tab**. The Veyra dashboard replaces Chrome's new-tab page.
@@ -27,6 +27,8 @@ Chrome extensions may replace `chrome://newtab` but **cannot silently take over 
 - **AI conversations:** opt-in capture per site for ChatGPT, Claude, Gemini, Perplexity, and Grok. Current DOM extraction is **best effort**, and virtualized/changed sites may not yield complete transcripts. Capture starts only after explicit host permission. More robust export engines can be incorporated later.
 - **Local archive:** AI chats and selected text/link clips saved in IndexedDB. Conversation Markdown downloads and portable JSON backup/import.
 - **Bookmarks:** read and search existing Chrome bookmarks, save open tabs with a click.
+- **Organized bookmarks:** browse bookmarks in collapsible sections by their current Chrome folder; search titles, folders and sites; sort by title, date or site. The sections do not move your bookmarks.
+- **AI archive organizer:** group saved conversations by AI provider and time (Today, Yesterday, This week, Earlier), or switch the grouping and sort order. Search reaches titles, URLs, providers and saved message text, with short excerpts in results.
 - **Popup quick-save:** save the active web tab into Repo, Agents, AI LLM, or another saved category shared with the dashboard.
 - **Full-page Markdown:** configure a `{title}`, `{domain}`, `{date}` filename pattern, ask for a destination on each save, or use a chosen subfolder under Downloads. Popup and context-menu exports share these preferences; Downloads permission is optional and requested only when needed.
 - **AI completion notifications:** detect completion on supported AI interfaces and optionally deliver an event to a user-configured HTTPS webhook. Detection depends on page UI signals and may vary by provider.
@@ -71,6 +73,12 @@ MIT, with retained notices for the adapted components. [LICENSE](LICENSE), [THIR
 The toolbar popup now saves the active tab into the Veyra Saved Tabs category chosen in the popup and offers a full-page Markdown export. Configure the filename with `{title}`, `{domain}` and `{date}`, then choose a save dialog or a Downloads subfolder. The popup follows the proposed SkyVision palette and supports the extension's English/Persian and theme preferences. This release also contains AI task-finished notifications, optional HTTPS webhook delivery and a GitHub release version check; the version check does not install extension code.
 
 [Install v0.1.10](dist/veyra-v0.1.10-chrome.zip) · [SHA-256](dist/SHA256SUMS.txt) · [Feature details](docs/UPDATES_AND_PAGE_EXPORT.md)
+
+## v0.1.11 — Searchable, organized libraries
+
+Bookmarks now appear in collapsible sections by their existing Chrome folder and can be searched or sorted. AI conversations are grouped by provider and time, with alternate grouping and sort controls; archive search also checks locally stored message text and shows a short matching excerpt.
+
+[Install v0.1.11](dist/veyra-v0.1.11-chrome.zip) · [SHA-256](dist/SHA256SUMS.txt)
 
 ## v0.1.2 — Automatic AI capture and storage destination
 

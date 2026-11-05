@@ -2,7 +2,7 @@
 
 Use statuses literally: **Implemented** means source/UI exists, not verified on every live site; **Planned** means not yet shipped. Tests and release notes must not claim browser end-to-end verification without evidence.
 
-## Implemented capability catalog (v0.1.10)
+## Implemented capability catalog (v0.1.11)
 
 | Domain | Feature | Status and caveat |
 |---|---|---|
@@ -20,9 +20,11 @@ Use statuses literally: **Implemented** means source/UI exists, not verified on 
 | Saved tabs | Restore a saved link or multi-tab collection | Implemented in v0.1.8; explicit action |
 | Saved tabs | Chrome's native Bookmark Sync for saved links/folders | Implemented in v0.1.8; Chrome profile sync needed |
 | Bookmarks | Search existing Chrome bookmarks | Implemented |
+| Bookmarks | Browse Chrome bookmarks grouped by folder, search by title/folder/site and sort by title, date or site | Implemented in v0.1.11; sections are views over existing folders and do not move bookmarks |
 | AI archive | Opt-in DOM-based ChatGPT/Claude/Gemini/Perplexity/Grok capture | Implemented; real sites can change DOM |
 | AI archive | Incremental long-chat update, stream edit handling, loss-averse merge | Implemented; missing virtualized DOM requires anchors |
 | AI archive | IndexedDB local archive; chat view and Markdown export | Implemented, content stays local |
+| AI archive | Automatic model and time sections, configurable grouping and sort, full-message search | Implemented in v0.1.11; search is local and returns short matching excerpts |
 | Export | Save current page content, headings and links as Markdown with configurable `{title}`, `{domain}`, `{date}` filename | Implemented in v0.1.10; best-effort page extraction |
 | Export | Ask for a destination or save under a configured Downloads subfolder | Implemented in v0.1.10; optional Downloads permission required |
 | Export | Automatic Markdown to Downloads, selected folder when dashboard open | Implemented; browser permission required |

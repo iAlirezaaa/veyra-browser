@@ -374,6 +374,26 @@ async function handle(message,sender) {
       return {settings,result};
     }
     case 'SNAPSHOT': return snapshot();
+    case 'SEARCH_CHATS': {
+      if(!isTrustedDashboardSender(sender,chrome.runtime))throw new Error('Searching saved conversations requires the Veyra New Tab dashboard');
+      const query=String(message.query||'').trim().slice(0,160).toLocaleLowerCase().replace(/[\u200c\u200d]/g,' ').replace(/\s+/g,' ');
+      if(!query)return [];
+      const terms=query.split(' ').filter(Boolean),chats=(await dbAll('chats')).filter(chat=>!chat.draft);
+      const result=[];
+      for(const chat of chats){
+        const meta=`${chat.title||''} ${chat.platform||''} ${chat.url||''}`.toLocaleLowerCase().replace(/[\u200c\u200d]/g,' ').replace(/\s+/g,' ');
+        let snippet='';
+        if(!terms.every(term=>meta.includes(term))){
+          const messages=(chat.messages||[]).map(msg=>String(msg.text||''));
+          const normalized=messages.map(body=>body.toLocaleLowerCase().replace(/[\u200c\u200d]/g,' '));
+          if(!terms.every(term=>normalized.some(body=>body.includes(term))))continue;
+          const index=normalized.findIndex(body=>body.includes(terms[0]));
+          if(index>=0){const body=messages[index],at=normalized[index].indexOf(terms[0]);snippet=body.slice(Math.max(0,at-70),Math.min(body.length,at+150)).replace(/\s+/g,' ').trim();}
+        }
+        result.push({id:chat.id,title:chat.title||'AI conversation',url:chat.url||'',platform:chat.platform||'other',messageCount:chat.messages?.length||0,createdAt:chat.createdAt||chat.updatedAt,updatedAt:chat.updatedAt||chat.createdAt,matchSnippet:snippet});
+      }
+      return result.sort((a,b)=>String(b.updatedAt).localeCompare(String(a.updatedAt))).slice(0,250);
+    }
     case 'SAVE_CHAT': return queueChatSave(message.payload||{},sender);
     case 'CAPTURE_HEALTH': return captureHealth(message,sender);
     case 'GET_REVIEW': return review();
