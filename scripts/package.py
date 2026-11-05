@@ -9,7 +9,7 @@ root = Path(__file__).resolve().parents[1]
 version = json.loads((root / 'manifest.json').read_text(encoding='utf-8'))['version']
 output = root / 'dist'
 output.mkdir(exist_ok=True)
-filename = f'veyra-v{version}-chrome.zip'
+filename = f'skyvision-veyra-v{version}-chrome.zip'
 files = sorted([root / 'manifest.json'] + [p for p in (root / 'src').rglob('*') if p.is_file() and not p.name.startswith('.')] + [root / f'assets/icon{size}.png' for size in (16, 48, 128)])
 required = ['manifest.json', 'src/ui/newtab.html', 'src/ui/popup.html', 'src/ui/appearance.js', 'assets/icon16.png', 'assets/icon48.png', 'assets/icon128.png']
 for required_name in required:

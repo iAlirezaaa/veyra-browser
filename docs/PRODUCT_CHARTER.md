@@ -17,7 +17,7 @@
 
 This charter is a **guardrail**, not an excuse to block engineering improvement. Any incompatible proposal must come with an ADR specifying what changes, why it is superior, and how users can opt out or roll back.
 
-## Current product surface (v0.1.11)
+## Current product surface (v0.1.12)
 
 - **Dashboard:** new-tab workspace for open tabs, saved tabs, bookmarks, chat archive, clips, settings and local review suggestions.
 - **Toolbar popup:** contextual quick save of the active tab into the Veyra bookmark library; opt-in AI chat capture; page-to-Markdown export with configurable filename tokens and destination; language/theme controls.
@@ -26,6 +26,7 @@ This charter is a **guardrail**, not an excuse to block engineering improvement.
 - **AI archive library:** saved conversations can be searched across titles, URLs, providers and local message text; results are grouped by provider and time by default, with alternate grouping and sorting controls. Search returns bounded metadata and short excerpts.
 - **Markdown destination:** ask for a location per export or save into a validated relative subfolder beneath Chrome Downloads. The optional Downloads permission is requested from an explicit user action.
 - **Visual direction:** restrained unslop-informed UI and proposed SkyVision semantic colors. SkyVision's source repository describes its identity as unapproved and its license as unspecified; the product references published color tokens and does not bundle its artwork or logo assets.
+- **Product lockup:** SkyVision is the primary name shown in Chrome and the extension UI; Veyra remains the workspace name, credited “By Hades. From SkyVision.”
 - **Illustration:** `assets/product-preview.png` is a concept rendering of the current interface for documentation. It is not evidence of live-browser operation or production approval.
 
 See `docs/UPDATES_AND_PAGE_EXPORT.md` for behavior and limitations. Automated test success does not imply provider-site or browser end-to-end verification.

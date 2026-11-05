@@ -21,7 +21,7 @@ jobs:
         with:
           name: veyra-chrome-extension
           path: |
-            dist/veyra-v*-chrome.zip
+            dist/skyvision-veyra-v*-chrome.zip
             dist/SHA256SUMS.txt
           if-no-files-found: error
       - name: Publish installable ZIP to repository
@@ -29,7 +29,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -f dist/veyra-v*-chrome.zip dist/SHA256SUMS.txt
+          git add -f dist/skyvision-veyra-v*-chrome.zip dist/SHA256SUMS.txt
           if ! git diff --cached --quiet; then
             git commit -m "build: publish installable Chrome ZIP [skip ci]"
             git push

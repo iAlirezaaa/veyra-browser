@@ -1,8 +1,8 @@
-# Veyra — Your browser, in order.
+# SkyVision · Veyra — Your browser, in order.
 
-**Veyra** is a local-first, bilingual (English/Persian) Chromium Manifest V3 workspace. Its New Tab dashboard organizes tabs, bookmarks, saved links and explicitly enabled AI chat archives; the redesigned toolbar popup provides categorized quick-save and configurable full-page Markdown export, using a restrained SkyVision-inspired palette.
+**SkyVision Veyra** is Hades's local-first, bilingual (English/Persian) Chromium browser workspace from SkyVision. Its New Tab dashboard organizes tabs, bookmarks, saved links and explicitly enabled AI chat archives; the redesigned toolbar popup provides categorized quick-save and configurable full-page Markdown export.
 
-![Veyra product preview](assets/product-preview.png)
+![SkyVision Veyra product preview](assets/product-preview.png)
 
 *Product concept based on the current interface. Example content is illustrative; this is not a live-browser test screenshot.*
 
@@ -12,7 +12,7 @@
 
 ## Quick install (Chrome/Edge/Brave)
 
-1. Download or unzip [`veyra-v0.1.11-chrome.zip`](dist/veyra-v0.1.11-chrome.zip) (or use this repository's root for development).
+1. Download or unzip [`skyvision-veyra-v0.1.12-chrome.zip`](dist/skyvision-veyra-v0.1.12-chrome.zip) (or use this repository's root for development).
 2. Open `chrome://extensions` and turn on **Developer mode**.
 3. Select **Load unpacked**, then select the folder containing `manifest.json`.
 4. Open a **new tab**. The Veyra dashboard replaces Chrome's new-tab page.
@@ -73,6 +73,12 @@ MIT, with retained notices for the adapted components. [LICENSE](LICENSE), [THIR
 The toolbar popup now saves the active tab into the Veyra Saved Tabs category chosen in the popup and offers a full-page Markdown export. Configure the filename with `{title}`, `{domain}` and `{date}`, then choose a save dialog or a Downloads subfolder. The popup follows the proposed SkyVision palette and supports the extension's English/Persian and theme preferences. This release also contains AI task-finished notifications, optional HTTPS webhook delivery and a GitHub release version check; the version check does not install extension code.
 
 [Install v0.1.10](dist/veyra-v0.1.10-chrome.zip) · [SHA-256](dist/SHA256SUMS.txt) · [Feature details](docs/UPDATES_AND_PAGE_EXPORT.md)
+
+## v0.1.12 — SkyVision product identity
+
+SkyVision is now the primary brand in the Chrome extension name, toolbar popup and dashboard, with Veyra retained as the workspace product name and Hades attribution.
+
+[Install v0.1.12](dist/skyvision-veyra-v0.1.12-chrome.zip) · [SHA-256](dist/SHA256SUMS.txt)
 
 ## v0.1.11 — Searchable, organized libraries
 

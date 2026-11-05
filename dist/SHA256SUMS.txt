@@ -1,1 +1,1 @@
-0b0d7d56489a014674a5f25127a8bed939aa8be9cc52ab81679f17bbb8e66142  veyra-v0.1.11-chrome.zip
+3f8b24bfce2233d9c8ed3bc27781d7d57a0f58cae9eb4ea92c58575149902cab  skyvision-veyra-v0.1.12-chrome.zip

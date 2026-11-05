@@ -2,13 +2,14 @@
 
 Use statuses literally: **Implemented** means source/UI exists, not verified on every live site; **Planned** means not yet shipped. Tests and release notes must not claim browser end-to-end verification without evidence.
 
-## Implemented capability catalog (v0.1.11)
+## Implemented capability catalog (v0.1.12)
 
 | Domain | Feature | Status and caveat |
 |---|---|---|
 | Workspace | New-tab replacement with dashboard, navigation, statistics and global search | Implemented |
 | Interface | English/Persian RTL language switch, Light/Dark/System theme | Implemented |
 | Interface | Branded toolbar popup with contextual page, theme and language support | Implemented; SkyVision colors are a proposed reference, not approved trademark assets |
+| Brand | SkyVision primary product identity with Veyra workspace name and Hades attribution | Implemented in v0.1.12 across Chrome name, toolbar popup, dashboard and product docs |
 | Open tabs | Browse/focus/close/bookmark tabs, domain grouping, detect duplicates | Implemented; closing requires approval |
 | Open tabs | Classify tabs into default/custom categories with editable names/colors | Implemented; tab assignment stored locally |
 | Open tabs | Sort visually by category, domain, title, recent activity or browser order | Implemented |
