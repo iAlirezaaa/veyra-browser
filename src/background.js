@@ -6,7 +6,7 @@ import { archiveId, isConversationUrl, chatArchiveName, cleanDownloadsFolder, do
 import { toMarkdown, safeFilename } from './core.js';
 import {sanitizeCategories, DEFAULT_CATEGORIES, TAB_SORTS, assignUrlCategory, tabCategory} from './tab-workspace.js';
 import {organizeChromeTabs} from './tab-organizer.js';
-import {isTrustedDashboardSender} from './message-auth.js';
+import {isTrustedDashboardSender,isTrustedPopupSender} from './message-auth.js';
 import {mergeCapturedMessages,normalizeMessages,MAX_CHAT_MESSAGES,MAX_CHAT_CHARS} from './chat-sync.js';
 import {markdownParts} from './archive.js';
 
@@ -335,6 +335,12 @@ async function importBackup(data) {
   return {chatCount,clipCount};
 }
 async function handle(message,sender) {
+  const dashboardOnly=new Set(['TAB_ASSIGN','TAB_CATEGORIES','TAB_SORT','TAB_GROUP_CHROME','TAB_REORDER_CHROME','TAB_ORGANIZE_CHROME','TAB_AUTO_ORGANIZE','SEARCH_CHATS','WEBHOOK_TEST','ENABLE_AI_TASK_WATCH','REQUEST_PAGE_ACCESS','DELETE_CHAT','DELETE_CLIP','DECISION','IMPORT']);
+  if(dashboardOnly.has(message?.type)&&!isTrustedDashboardSender(sender,chrome.runtime))throw new Error('Open Veyra in its New Tab dashboard to perform this action');
+  const popupOrDashboard=new Set(['SETTINGS','SYNC_CAPTURE','CAPTURE_OPEN_TABS']);
+  if(popupOrDashboard.has(message?.type)&&!isTrustedDashboardSender(sender,chrome.runtime)&&!isTrustedPopupSender(sender,chrome.runtime))throw new Error('This action requires a Veyra extension page');
+  const dashboardData=new Set(['SNAPSHOT','GET_REVIEW','SEARCH_CHATS','GET_EXPORT_QUEUE','ACK_FOLDER_EXPORT','FLUSH_DOWNLOADS','GET_CHAT','EXPORT']);
+  if(dashboardData.has(message?.type)&&!isTrustedDashboardSender(sender,chrome.runtime))throw new Error('Reading Veyra data requires its New Tab dashboard');
   switch(message?.type) {
     case 'TAB_ASSIGN': {
       if(!isTrustedDashboardSender(sender,chrome.runtime))throw new Error('Open Veyra in its New Tab dashboard to manage Chrome tabs');

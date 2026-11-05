@@ -1,8 +1,8 @@
-# SkyVision · Veyra — Your browser, in order.
+# Veyra — Your browser, in order.
 
-**SkyVision Veyra** is Hades's local-first, bilingual (English/Persian) Chromium browser workspace from SkyVision. Its New Tab dashboard organizes tabs, bookmarks, saved links and explicitly enabled AI chat archives; the redesigned toolbar popup provides categorized quick-save and configurable full-page Markdown export.
+**Veyra** is a local-first, bilingual (English/Persian) Chromium browser workspace made by SkyVision, with product design by Hades. Its New Tab dashboard organizes tabs, bookmarks, saved links and explicitly enabled AI chat archives; the redesigned toolbar popup provides categorized quick-save and configurable full-page Markdown export.
 
-![SkyVision Veyra product preview](assets/product-preview.png)
+![Veyra product preview](assets/product-preview.png)
 
 *Product concept based on the current interface. Example content is illustrative; this is not a live-browser test screenshot.*
 
@@ -12,7 +12,7 @@
 
 ## Quick install (Chrome/Edge/Brave)
 
-1. Download or unzip [`skyvision-veyra-v0.1.12-chrome.zip`](dist/skyvision-veyra-v0.1.12-chrome.zip) (or use this repository's root for development).
+1. Download or unzip [`veyra-v0.1.12-chrome.zip`](dist/veyra-v0.1.12-chrome.zip) (or use this repository's root for development).
 2. Open `chrome://extensions` and turn on **Developer mode**.
 3. Select **Load unpacked**, then select the folder containing `manifest.json`.
 4. Open a **new tab**. The Veyra dashboard replaces Chrome's new-tab page.
@@ -74,11 +74,11 @@ The toolbar popup now saves the active tab into the Veyra Saved Tabs category ch
 
 [Install v0.1.10](dist/veyra-v0.1.10-chrome.zip) · [SHA-256](dist/SHA256SUMS.txt) · [Feature details](docs/UPDATES_AND_PAGE_EXPORT.md)
 
-## v0.1.12 — SkyVision product identity
+## v0.1.12 — Veyra product identity
 
-SkyVision is now the primary brand in the Chrome extension name, toolbar popup and dashboard, with Veyra retained as the workspace product name and Hades attribution.
+Veyra is the product name across Chrome and its dashboard. SkyVision is identified as the company behind the product; Hades is credited for product design.
 
-[Install v0.1.12](dist/skyvision-veyra-v0.1.12-chrome.zip) · [SHA-256](dist/SHA256SUMS.txt)
+[Install v0.1.12](dist/veyra-v0.1.12-chrome.zip) · [SHA-256](dist/SHA256SUMS.txt)
 
 ## v0.1.11 — Searchable, organized libraries
 

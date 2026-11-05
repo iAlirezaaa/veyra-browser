@@ -1,8 +1,8 @@
-# اسکای‌ویژن · ویرا (SkyVision · Veyra) — فضای کاری مرورگر
+# ویرا (Veyra) — فضای کاری مرورگر
 
-**SkyVision Veyra** فضای کاری محلی و دوزبانهٔ مرورگر Chromium از Hades برای SkyVision است. نام محصول Veyra است؛ هویت اصلی در افزونه، SkyVision نمایش داده می‌شود.
+**ویرا (Veyra)** فضای کاری محلی و دوزبانهٔ مرورگر Chromium، ساختهٔ شرکت SkyVision و با طراحی Hades است. نام محصول ویرا است؛ SkyVision نام شرکت سازنده است.
 
-![پیش‌نمایش محصول SkyVision Veyra](assets/product-preview.png)
+![پیش‌نمایش محصول ویرا](assets/product-preview.png)
 
 *تصویر معرفی مفهومی بر پایهٔ رابط فعلی؛ داده‌ها نمونه‌اند و تصویر، اسکرین‌شات آزمون زندهٔ مرورگر نیست.*
 
@@ -10,7 +10,7 @@
 
 ## نصب
 
-1. فایل [`skyvision-veyra-v0.1.12-chrome.zip`](dist/skyvision-veyra-v0.1.12-chrome.zip) را از حالت فشرده خارج کنید، یا پوشهٔ ریپو را برای اجرای نسخهٔ توسعه انتخاب کنید.
+1. فایل [`veyra-v0.1.12-chrome.zip`](dist/veyra-v0.1.12-chrome.zip) را از حالت فشرده خارج کنید، یا پوشهٔ ریپو را برای اجرای نسخهٔ توسعه انتخاب کنید.
 2. در کروم به `chrome://extensions` بروید و **Developer mode** را روشن کنید.
 3. **Load unpacked** را انتخاب و پوشه‌ای که `manifest.json` در آن است انتخاب کنید.
 4. تب جدید باز کنید تا داشبورد ویرا را ببینید.
@@ -112,11 +112,11 @@ popup نوار ابزار اکنون تب باز را در دستهٔ انتخا
 
 [دریافت بستهٔ نصب ۰.۱.۱۰](dist/veyra-v0.1.10-chrome.zip) · [SHA-256](dist/SHA256SUMS.txt) · [شرح قابلیت‌ها](docs/UPDATES_AND_PAGE_EXPORT.md)
 
-## نسخهٔ ۰.۱.۱۲ — هویت برند SkyVision
+## نسخهٔ ۰.۱.۱۲ — نام محصول ویرا و شرکت SkyVision
 
-نام SkyVision حالا برند اصلی افزونه در نام نصب‌شده در Chrome، popup نوار ابزار و داشبورد است؛ Veyra به‌عنوان نام فضای کاری و انتساب Hades حفظ شده است.
+نام محصول در Chrome، popup و داشبورد Veyra است. SkyVision به‌عنوان شرکت سازنده و Hades به‌عنوان طراح محصول معرفی می‌شوند.
 
-[دریافت بستهٔ نصب ۰.۱.۱۲](dist/skyvision-veyra-v0.1.12-chrome.zip) · [SHA-256](dist/SHA256SUMS.txt)
+[دریافت بستهٔ نصب ۰.۱.۱۲](dist/veyra-v0.1.12-chrome.zip) · [SHA-256](dist/SHA256SUMS.txt)
 
 ## نسخهٔ ۰.۱.۱۱ — کتابخانه‌های مرتب و قابل جست‌وجو
 

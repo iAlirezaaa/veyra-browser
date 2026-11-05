@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "SkyVision Veyra — Browser Workspace",
-  "short_name": "SkyVision Veyra",
+  "name": "Veyra — Browser Workspace",
+  "short_name": "Veyra",
   "version": "0.1.12",
-  "description": "SkyVision Veyra is a calm, bilingual browser workspace for tabs, bookmarks, AI conversations and local decisions.",
+  "description": "Veyra is a calm, bilingual browser workspace by SkyVision for tabs, bookmarks, AI conversations and local decisions.",
   "permissions": [
     "tabs",
     "bookmarks",
@@ -12,8 +12,7 @@
     "scripting",
     "contextMenus",
     "tabGroups",
-    "notifications",
-    "https://api.github.com/*"
+    "notifications"
   ],
   "optional_permissions": [
     "history",
@@ -31,7 +30,7 @@
     "type": "module"
   },
   "action": {
-    "default_title": "Open SkyVision Veyra",
+    "default_title": "Open Veyra",
     "default_popup": "src/ui/popup.html"
   },
   "icons": {

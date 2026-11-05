@@ -46,24 +46,34 @@ globalThis.chrome={
   bookmarks:{getTree:async()=>[]}
 };
 await import('../src/background.js');
+const dashboard={id:'veyra-test-extension',url:'chrome-extension://veyra-test-extension/src/ui/newtab.html',tab:{id:99,url:'chrome-extension://veyra-test-extension/src/ui/newtab.html'}};
 async function send(message,sender={tab:{id:1,url:'https://chatgpt.com/c/abc'}}){
  return new Promise(resolve=>{listener(message,sender,resolve);});
 }
+const readDashboard=message=>send(message,dashboard);
 test('capture message persists content through actual background handler and IndexedDB',async()=>{
  const text='A question from modern ChatGPT';
  const reply=await send({type:'SAVE_CHAT',payload:{platform:'chatgpt',url:'https://chatgpt.com/c/abc',title:'Real flow fixture',messages:[{role:'user',text},{role:'assistant',text:'Response'}]}});
  assert.equal(reply.ok,true);assert.equal(reply.data.saved,true);
- const snapshot=await send({type:'SNAPSHOT'});
+ const snapshot=await readDashboard({type:'SNAPSHOT'});
  assert.equal(snapshot.ok,true);assert.equal(snapshot.data.chats.length,1);
  assert.equal(snapshot.data.chats[0].messageCount,2);
  assert.equal(state.captureEvent?.count,2);
- const detail=await send({type:'GET_CHAT',id:'chat:https://chatgpt.com/c/abc'});
+ const detail=await readDashboard({type:'GET_CHAT',id:'chat:https://chatgpt.com/c/abc'});
  assert.equal(detail.data.messages[0].text,text);
 });
 test('capture reports health without collecting chat text in diagnostic telemetry',async()=>{
  const r=await send({type:'CAPTURE_HEALTH',platform:'chatgpt',status:'saved',count:2});
  assert.equal(r.ok,true);assert.equal(state.captureHealth.chatgpt.status,'saved');
  assert.equal(JSON.stringify(state.captureHealth).includes('A question from modern ChatGPT'),false);
+});
+test('content scripts cannot read the local archive or change extension settings',async()=>{
+ const sender={id:'veyra-test-extension',url:'https://chatgpt.com/c/abc',tab:{id:1,url:'https://chatgpt.com/c/abc'}};
+ for(const type of ['SNAPSHOT','GET_CHAT','EXPORT','SETTINGS','GET_REVIEW']){
+  const response=await send({type,id:'chat:https://chatgpt.com/c/abc',patch:{notificationWebhook:'https://attacker.example'}},sender);
+  assert.equal(response.ok,false,`${type} unexpectedly succeeded`);
+ }
+ assert.equal(state.settings.notificationWebhook,undefined);
 });
 test('background rejects messages from an unrelated domain',async()=>{
  const r=await send({type:'SAVE_CHAT',payload:{platform:'chatgpt',url:'https://chatgpt.com/c/a',messages:[{role:'user',text:'sensitive'}]}},{tab:{id:2,url:'https://evil.invalid/'}});
@@ -73,9 +83,9 @@ test('background rejects messages from an unrelated domain',async()=>{
 test('opt-in drafts are persisted before the SPA conversation URL, then migrated',async()=>{
   const draft=await send({type:'SAVE_CHAT',payload:{platform:'chatgpt',url:'https://chatgpt.com/',title:'New chat',messages:[{role:'user',text:'Question before route'}]}},{tab:{id:57,url:'https://chatgpt.com/'}});
   assert.equal(draft.ok,true);assert.equal(draft.data.saved,true);
-  let result=await send({type:'SNAPSHOT'});assert.ok(result.data.chats.some(x=>x.id==='draft:chatgpt:57'));
+  let result=await readDashboard({type:'SNAPSHOT'});assert.ok(result.data.chats.some(x=>x.id==='draft:chatgpt:57'));
   const stable=await send({type:'SAVE_CHAT',payload:{platform:'chatgpt',url:'https://chatgpt.com/c/assigned',title:'New chat',messages:[{role:'user',text:'Question before route'},{role:'assistant',text:'Answer after route'}]}},{tab:{id:57,url:'https://chatgpt.com/c/assigned'}});
-  assert.equal(stable.ok,true);result=await send({type:'SNAPSHOT'});
+  assert.equal(stable.ok,true);result=await readDashboard({type:'SNAPSHOT'});
   assert.ok(result.data.chats.some(x=>x.id==='chat:https://chatgpt.com/c/assigned'));
   assert.ok(!result.data.chats.some(x=>x.id==='draft:chatgpt:57'));
 });
@@ -125,17 +135,17 @@ test('partial late window appends to the same persistent chat without losing 650
    assert.equal(reply.ok,true,reply.error);
  }
  const id='chat:https://chatgpt.com/c/long-case';
- let got=(await send({type:'GET_CHAT',id})).data;
+ let got=(await readDashboard({type:'GET_CHAT',id})).data;
  assert.equal(got.messages.length,650);
  const tail=initial.slice(-5);
  const append=await send({type:'SAVE_CHAT',payload:{platform:'chatgpt',url,title:'long test',messages:[...tail,{role:'user',text:'One entirely new appended user question after 650 earlier turns.'}]}});
  assert.equal(append.ok,true,append.error);assert.equal(append.data.count,651);
- got=(await send({type:'GET_CHAT',id})).data;
+ got=(await readDashboard({type:'GET_CHAT',id})).data;
  assert.equal(got.messages.length,651);
  assert.equal(got.messages[0].text,initial[0].text.trim());
  const repeat=await send({type:'SAVE_CHAT',payload:{platform:'chatgpt',url,title:'long test',messages:tail}});
  assert.equal(repeat.data.reason,'Unchanged');
- assert.equal((await send({type:'GET_CHAT',id})).data.messages.length,651);
+ assert.equal((await readDashboard({type:'GET_CHAT',id})).data.messages.length,651);
 });
 
 test('destructive and bulk data operations require the trusted New Tab dashboard sender',async()=>{
@@ -151,7 +161,7 @@ test('destructive and bulk data operations require the trusted New Tab dashboard
     assert.equal(dec.ok,false);assert.match(dec.error,/dashboard/);
   }
   // The guard, not the format check, blocked the untrusted import: nothing landed.
-  assert.equal((await send({type:'GET_CHAT',id:'chat:https://chatgpt.com/c/evil-import'})).data,undefined);
+  assert.equal((await readDashboard({type:'GET_CHAT',id:'chat:https://chatgpt.com/c/evil-import'})).data,undefined);
   const dashboard={id:'veyra-test-extension',url:'chrome-extension://veyra-test-extension/src/ui/newtab.html',tab:{id:99,url:'chrome-extension://veyra-test-extension/src/ui/newtab.html'}};
   if(!stores.has('chats'))stores.set('chats',new Map());
   stores.get('chats').set('chat:auth-del',{id:'chat:auth-del',url:'https://chatgpt.com/c/auth-del',title:'fixture',messages:[{role:'user',text:'x'}]});
